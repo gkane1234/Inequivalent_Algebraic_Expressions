@@ -62,8 +62,8 @@ class Operation:
             "-": cls("-"),
             "*": cls("*"),  
             "/": cls("/", operation_function=lambda a, b: float(a) / b if b != 0 else None),
-            "!-": cls("!-"),
-            "!/": cls("!/", operation_function=lambda a, b: float(a) / b if b != 0 else None)
+           # "!-": cls("!-"),
+           # "!/": cls("!/", operation_function=lambda a, b: float(a) / b if b != 0 else None)
         }
     @classmethod
     def commutative_operations_dict(cls):
@@ -124,13 +124,16 @@ class Expression:
         return iter(self.expression)
     def __str__(self):
         if self.rpn:
-            return str(self.expression)
+            return "".join([str(x) for x in Expression.convert_to_parenthetical(self).expression])
         else:
             return "".join([str(x) for x in self.expression])
     def __repr__(self):
         return str(self)
     def __hash__(self):
-        return hash(self.expression)
+        if self.rpn:
+            return hash(str(Expression.convert_to_parenthetical(self).expression))
+        else:
+            return hash(str(self.expression))
     def __eq__(self,other):
         if isinstance(other,Expression):
             return self.expression == other.expression and self.rpn == other.rpn
@@ -301,62 +304,49 @@ class ExpressionList:
 
      
 class ExpressionPowerSet():
-    def __init__(self,rounding=5,values = [0,1,2,3],generate_generic_expressions=True,rpn=True,ops = Operation.default_operations()):
+    def __init__(self,rounding=5,values = 4,rpn=True,ops = Operation.default_operations()):
+        if isinstance(values,int):
+            self.values = list(range(values))
+            self.generate_generic_expressions = True
+        else:
+            self.values = values
+            self.generate_generic_expressions = False
         self.rounding = rounding
-        self.values = values
-        self.generate_generic_expressions = generate_generic_expressions
         self.rpn = rpn
         self.ops = ops
     def get_expression_list(self):
         if self.generate_generic_expressions:
             self.values = list(range(len(self.values)))
-        self.expression_list = list(self.generate_expressions_2())
-        print(self.expression_list)
-        while len(self.expression_list) < 27142:
-           print(len(self.expression_list))
-           self.expression_list=(list(self.generate_expressions_2()))
+        if self.rpn:
+            self.expression_list = list(self.generate_rpn_expressions())
+        else:
+            self.expression_list = list(self.generate_parenthetical_expressions())
+
         return ExpressionList(self.expression_list,rounding=self.rounding,generic_expressions=self.generate_generic_expressions,rpn=self.rpn,ops=self.ops)
 
-    def generate_expressions(self,truncate_using=None):
-        #todo: refactor to generate only expressions that are unique by testing using the truncate_using values.
-        num_values = len(self.values)
-        num_operations = num_values - 1
+    def generate_rpn_expressions(self,truncate_using=None):
+        def assemble_rpn_expression(values,operations,operation_order,abstract=False):
+            if values == (0,2,1):
+                print("here")
+                print(values,operations,operation_order)
+            used = [False]*len(operations)
+            values = list(values)
+            for operation_index in operation_order:
+                
+                offset = used[:operation_index].count(True)
+                used[operation_index]=True
 
-        values_permutations = ExpressionPowerSet.distinct_permutations([i for i in self.values])
-        operations_list=[]
+                operation = operations[operation_index]
+                
+                operation_index-=offset
+                left_partial = values[operation_index] if isinstance(values[operation_index],list) else [values[operation_index]]
+                right_partial = values[operation_index+1] if isinstance(values[operation_index+1],list) else [values[operation_index+1]]
+                new_partial =left_partial+right_partial+[operation]
+                values.pop(operation_index)
+                values[operation_index]=new_partial
 
-        if not self.generate_generic_expressions:
-            seen = set()
-        for arr in self.generate_operation_combinations(num_operations,self.ops):
-            operations_list.extend(ExpressionPowerSet.distinct_permutations(arr))
-        if self.rpn:
-            for ops in reversed(operations_list):
-                for values in values_permutations:
-                    for expression in self.generate_reverse_polish(values,ops):
-                        next_expression = Expression(tuple(expression),abstract=self.generate_generic_expressions,rounding=self.rounding,rpn=True)
-                        if self.generate_generic_expressions or (next_expression.value is not None and next_expression.value not in seen):
-                            if not self.generate_generic_expressions:
-                                seen.add(next_expression.value)
-                            yield next_expression
-        else:
-            parentheses_list = list(self.generate_parentheses(num_values))
-            
-            for ops in reversed(operations_list):
-                for values in values_permutations:
-                    for expression in parentheses_list:
-                        expression = list(expression)
-                        
-                        for val in values:
-                            expression[expression.index('n')] = val
-                        for op in ops:
-                            expression[expression.index('x')] = op
-                        expression = tuple(expression)
-                        next_expression = Expression(tuple(expression),abstract=self.generate_generic_expressions,rounding=self.rounding,rpn=False)
-                        if self.generate_generic_expressions or (next_expression.value is not None and next_expression.value not in seen):
-                            if not self.generate_generic_expressions:
-                                seen.add(next_expression.value)
-                            yield next_expression
-    def generate_rpn_expressions_2(self):
+            return Expression(tuple(values[0]),abstract=abstract,rounding=self.rounding,rpn=True)
+        
         num_values = len(self.values)
 
         if truncate_using is None:
@@ -383,55 +373,20 @@ class ExpressionPowerSet():
             operations_list.extend(ExpressionPowerSet.distinct_permutations(arr))
         
         operation_orders = list(ExpressionPowerSet.permutations([i for i in range(num_operations)]))
-        
         for operations in reversed(operations_list):
             for operation_order_indexes in operation_orders:
                 for given_values,truncator_values in values_and_truncators_permutations:
-                    used = set()
-                    given_expression = []
-                    truncator_expression = []
-                    for i,operation_order_index in enumerate(operation_order_indexes):
-                        if operation_order_index not in used and operation_order_index+1 not in used:
-                            used.add(operation_order_index)
-                            used.add(operation_order_index+1)
-                            given_expression.extend([given_values[operation_order_index],given_values[operation_order_index+1]])
-                            truncator_expression.extend([truncator_expression[operation_order_index]],truncator_expression[operation_order_index+1])
-                        elif operation_order_index not in used:
-                            
-
-                            
-
-
-
-                        
-
-                        
-
-                        
-
-
-                        
-                        
-
-                        
-
-
-
-
-                    for i in range(num_values):
-                        expression_values[expression_values.index('n')] = values[i]
-                        expression_truncator[expression_truncator.index('n')] = truncator[i]
-                    for op in ops:
-                        expression_values[expression_values.index('x')] = op
-                        expression_truncator[expression_truncator.index('x')] = op
-                    truncator_expression = Expression(tuple(expression_truncator), abstract=False, rounding=self.rounding, rpn=False)
-                    if truncator_expression.value is None or truncator_expression.value not in seen: 
-                        #print(truncator_expression, truncator_expression.value)
-                        next_expression = Expression(tuple(expression_values), abstract=self.generate_generic_expressions, rounding=self.rounding, rpn=False)
-                        seen.add(truncator_expression.value)
-                        yield next_expression
+                    
+                    
+                    next_expression = assemble_rpn_expression(truncator_values,operations,operation_order_indexes,abstract=False)
+                    #print(next_expression.value)
+                    if next_expression.value not in seen:
+                        if next_expression.value is not None:
+                            seen.add(next_expression.value)
+                        yield assemble_rpn_expression(given_values,operations,operation_order_indexes,abstract=self.generate_generic_expressions)
+                    
             
-    def generate_expressions_2(self, truncate_using=None):
+    def generate_parenthetical_expressions(self, truncate_using=None):
         num_values = len(self.values)
 
         if truncate_using is None:
@@ -458,7 +413,6 @@ class ExpressionPowerSet():
             operations_list.extend(ExpressionPowerSet.distinct_permutations(arr))
         
         parentheses_list = list(self.generate_parentheses(num_values))
-        
         for ops in reversed(operations_list):
             for expression in parentheses_list:
                 for values, truncator in values_and_truncators_permutations:
@@ -477,36 +431,6 @@ class ExpressionPowerSet():
                         seen.add(truncator_expression.value)
                         yield next_expression
     
-    def generate_reverse_polish(self,values,ops):
-        '''
-        values is the order of values to be substituted into the expression.
-        ops is the list of operations to be performed in the expression.
-
-        returns all possible expressions in reverse polish notation that can be formed by the given ordering of the values 
-        and all permutations of the operations.
-        '''
-
-        def insert_ops():
-            location = len(rpn)
-            last = 0
-            for i,op_location in enumerate(reversed(op_locations)):
-                    if op_location>last:
-                        location-=1
-                    rpn.insert(location,ops[i])
-
-
-        num_ops = len(ops)
-        op_locations_list = list(ExpressionPowerSet.get_operation_locations(num_ops))
-        for perm in ExpressionPowerSet.distinct_permutations([i for i in range(num_ops)]):
-            #print(list(ExpressionList.get_operation_locations(num_ops)))
-            for op_locations in op_locations_list:
-                rpn = list(values)
-                insert_ops()
-                #print(rpn)
-
-                
-                
-                yield Expression(tuple(rpn),abstract=self.generate_generic_expressions,rounding=self.rounding,rpn=True)
     @staticmethod
     def generate_operation_combinations(num_ops,ops,op=0,ops_left=None):
 
@@ -785,15 +709,27 @@ class Solver(ExpressionList):
 
         
 #smallest_generator = Solver.generate_solver_from_values([67,71,19,41])
-#print(len(smallest_generator))
 
 
-expression_power_set = ExpressionPowerSet(rpn=False,rounding=5,values=[0,1,2,3],generate_generic_expressions=True)
-generic_expressions = expression_power_set.get_expression_list()
+import time
 
-#print(solver.solve([8,8,3,3]))
+# Measure time for RPN expressions
+start_time = time.time()
+expression_power_set = ExpressionPowerSet(rpn=True, rounding=5, values=5)
+rpn_expressions = [str(expression) for expression in expression_power_set.get_expression_list()]
+rpn_time = time.time() - start_time
+
+# Measure time for parenthetical expressions
+start_time = time.time()
+expression_power_set = ExpressionPowerSet(rpn=False, rounding=5, values=5)
+parenthetical_expressions = [str(expression) for expression in expression_power_set.get_expression_list()]
+parenthetical_time = time.time() - start_time
+
+print(f"Time taken for RPN expressions: {rpn_time:.4f} seconds")
+print(f"Time taken for parenthetical expressions: {parenthetical_time:.4f} seconds")
 
 
+print(len(rpn_expressions),len(parenthetical_expressions))
 
 '''
 [67, 71, 19, 41]
