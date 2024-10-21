@@ -1163,7 +1163,11 @@ class QuestionUI:
 
         def save_and_generate():
             save_settings()
-            self.questions = generate_questions()
+            self.questions = list(solver.generate_set_of_valid_questions(
+                num_questions=settings.num_questions,
+                value_range=(settings.min_value, settings.max_value),
+                solution_range=(settings.min_solutions, settings.max_solutions)
+            ))
             self.current_page = 0
             self.update_questions()
 
