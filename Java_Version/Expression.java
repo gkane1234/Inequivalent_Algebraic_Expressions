@@ -2,14 +2,14 @@ package counting_operations.Java_Version;
 import java.util.*;
 
 public class Expression {
-    private int[] values;
-    private byte[] operations;
-    private boolean[] order;
+    public byte[] values;
+    public byte[] operations;
+    public boolean[] order;
     private boolean genericExpression;
     private Integer rounding;
     private double value;
 
-    public Expression(int[] values,byte[] operations,boolean[] order, int rounding, boolean genericExpression) {
+    public Expression(byte[] values,byte[] operations,boolean[] order, int rounding, boolean genericExpression) {
 
         this.values=values;
         this.operations=operations;
@@ -18,15 +18,20 @@ public class Expression {
         this.genericExpression=genericExpression;
     }
 
+    public Expression(Expression expression) {
+        this(expression.values,expression.operations,expression.order,expression.rounding,expression.genericExpression);
+    }
 
-    public Expression change_values(int[] values) {
-        int[] newValues = new int[values.length];
+
+    public Expression change_values(byte[] values) {
+        byte[] newValues = new byte[values.length];
         for (byte i=0;i<values.length;i++) {
-            newValues[i]=values[(int)this.values[i]];
+            newValues[i]=values[this.values[i]];
         }
 
         return new Expression(newValues,this.operations,this.order,this.rounding,genericExpression);
     }
+
     public double evaluate_with_values(double[] values) {
         double[] newValues = new double[values.length];
         for (byte i=0;i<values.length;i++) {
@@ -65,24 +70,24 @@ public class Expression {
         return evaluateRpn(values);
     }
 
-    public Double evaluateRpn(double[] values) {
-        Deque<Double> stack = new ArrayDeque<>();
+    public double evaluateRpn(double[] values) {
+        DoubleArrayStack stack = new DoubleArrayStack(this.order.length);
         byte values_pointer =0;
         byte operations_pointer = 0;
 
         for (boolean isNumber : this.order) {
             if (isNumber){
-                stack.push((Double)values[values_pointer++]);
+                stack.push(values[values_pointer++]);
             } else {
                 if (stack.size() < 2) {
                     throw new IllegalStateException("Invalid expression: " + this.toString());
                 }
-                Double b = (Double)stack.pop();
-                Double a = (Double)stack.pop();
+                double b = stack.pop();
+                double a = stack.pop();
                 
-                Double result = Operation.OPERATIONS[operations[operations_pointer++]].apply(a, b);
-                if (result == null) {
-                    return null;
+                double result= Operation.OPERATIONS[operations[operations_pointer++]].apply(a, b);
+                if (Double.isNaN(result)) {
+                    return result;
                 }
                 stack.push(result);
             }
@@ -137,7 +142,7 @@ public class Expression {
 
     private static Expression combineExpressions(Expression expr1, Expression expr2, byte opCode) {
 
-        int[] newValues = combine(expr1.values,expr2.values);
+        byte[] newValues = combine(expr1.values,expr2.values);
         byte[] new_operations = combine_with_extra_spot(expr1.operations,expr2.operations);
         new_operations[new_operations.length-1]=opCode;
         boolean[] new_order =combine_with_extra_spot(expr1.order,expr2.order);
@@ -146,8 +151,8 @@ public class Expression {
         return new Expression(newValues, new_operations, new_order, expr1.rounding,expr1.genericExpression);
 
     }
-    public static int[] combine(int[] arr1, int[] arr2) {
-        int[] newArr = new int[arr1.length + arr2.length];
+    public static byte[] combine(byte[] arr1, byte[] arr2) {
+        byte[] newArr = new byte[arr1.length + arr2.length];
         
         // Use System.arraycopy for efficient copying
         System.arraycopy(arr1, 0, newArr, 0, arr1.length);

@@ -6,7 +6,7 @@ public class Operation {
         new Operation((a, b) -> a + b, true,'+'),
         new Operation((a, b) -> a - b, false,'-'),
         new Operation((a, b) -> a * b, true,'*'),
-        new Operation((a, b) -> (b != 0) ? a / b : null, false,'/')};
+        new Operation((a, b) -> (b != 0) ? a / b : Double.NaN, false,'/')};
 
     public static void changeOperations(Operation[] newOperations) {
         OPERATIONS=newOperations;

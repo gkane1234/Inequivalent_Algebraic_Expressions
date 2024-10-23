@@ -30,30 +30,30 @@ public class ExpressionDynamic {
         // Initialize expression lists
         List<ExpressionList> expressionLists = new ArrayList<>();
         ExpressionList firstExpressionList = new ExpressionList(new ArrayList<>(), 1, rounding, numTruncators,true);
-        firstExpressionList.add(new Expression(new int[]{0},new byte[]{},new boolean[] {true},rounding,true));
+        firstExpressionList.add(new Expression(new byte[]{0},new byte[]{},new boolean[] {true},rounding,true));
         expressionLists.add(firstExpressionList);
 
         // Generate expressions for different numbers of values
         for (int currentNumValues = 2; currentNumValues <= numValues; currentNumValues++) {
             ExpressionList currentExpressionList = new ExpressionList(new ArrayList<>(), currentNumValues, rounding, numTruncators,true);
-            int start = currentNumValues - 1;
-            int end = currentNumValues / 2;
+            int start = (currentNumValues-1);
+            int end = (currentNumValues>>1);
             if (currentNumValues % 2 == 0) {
                 end -= 1;
             }
 
             for (int i = start; i > end; i--) {
                 // Generate combinations of currentNumValues
-                List<int[]> combinations = generateCombinations(currentNumValues, i);
+                List<byte[]> combinations = generateCombinations(currentNumValues, i);
 
-                for (int[] combination: combinations) {
+                for (byte[] combination: combinations) {
                     
-                    Set<Integer> combinationSet = new HashSet<>();
-                    for (int num : combination) {
+                    Set<Byte> combinationSet = new HashSet<>();
+                    for (byte num : combination) {
                         combinationSet.add(num);
                     }
-                    Set<Integer> remainder = new HashSet<>();
-                    for (int k = 0; k < currentNumValues; k++) {
+                    Set<Byte> remainder = new HashSet<>();
+                    for (byte k = 0; k < currentNumValues; k++) {
                         if (!combinationSet.contains(k)) {
                             remainder.add(k);
                         }
@@ -79,10 +79,10 @@ public class ExpressionDynamic {
 
     // Helper method to convert Set<Integer> to int[]
        // Helper method to convert Set<Integer> to int[]
-       private static int[] toArray(Set<Integer> set) {
-        int[] arr = new int[set.size()];
-        int index = 0;
-        for (int val : set) {
+       private static byte[] toArray(Set<Byte> set) {
+        byte[] arr = new byte[set.size()];
+        byte index = 0;
+        for (byte val : set) {
             arr[index++] = val;
         }
         return arr;
@@ -103,21 +103,21 @@ public class ExpressionDynamic {
     }
 
     // Helper method to generate all combinations of size 'i' from a range of numbers [0, n)
-    private static List<int[]> generateCombinations(int n, int size) {
-        List<int[]> combinations = new ArrayList<>();
-        generateCombinationsRecursive(combinations, new int[size], 0, 0, n, size);
+    private static List<byte[]> generateCombinations(int n, int size) {
+        List<byte[]> combinations = new ArrayList<>();
+        generateCombinationsRecursive(combinations, new byte[size], 0, 0, n, size);
         return combinations;
     }
 
     // Recursive method to generate combinations
-    private static void generateCombinationsRecursive(List<int[]> combinations, int[] combination, int index, int start, int n, int size) {
+    private static void generateCombinationsRecursive(List<byte[]> combinations, byte[] combination, int index, int start, int n, int size) {
         if (index == size) {
             combinations.add(combination.clone()); // Store a copy of the current combination
             return;
         }
         for (int i = start; i < n; i++) {
-            combination[index] = i;
-            generateCombinationsRecursive(combinations, combination, index + 1, i + 1, n, size);
+            combination[index] = (byte)i;
+            generateCombinationsRecursive(combinations, combination,(index+1),(i+1), n, size);
         }
     }
 }

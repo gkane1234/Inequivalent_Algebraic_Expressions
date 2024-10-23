@@ -77,7 +77,7 @@ public class ExpressionList {
         return expressions.toString();
     }
 
-    public ExpressionList evaluate(int[] values) {
+    public ExpressionList evaluate(byte[] values) {
         return createEvaluatedExpressionList(this, values, this.numTruncators);
     }
 
@@ -110,7 +110,7 @@ public class ExpressionList {
     }
 
     // Static method to create a new expression list with the given values
-    public static ExpressionList createEvaluatedExpressionList(ExpressionList genericExpressionList, int[] values, int numTruncators) throws IllegalStateException {
+    public static ExpressionList createEvaluatedExpressionList(ExpressionList genericExpressionList, byte[] values, int numTruncators) throws IllegalStateException {
         if (!genericExpressionList.genericExpressions) {
             throw new IllegalStateException("Input must be a generic expression list");
         }
