@@ -1182,7 +1182,7 @@ class Settings:
         self.min_solutions = 1
         self.max_solutions = 1000
         self.num_questions = 3
-        self.num_values = 5
+        self.num_values = 4
         self.num_truncators = 4
         self.rounding=5 
 
@@ -1232,7 +1232,7 @@ print(f"Time taken: {end_time - start_time:.4f} seconds")
 print(questions)
 
 # Create the main window
-
+q = QuestionUI(questions)
 
 # Create the UI with the generated questions
 
