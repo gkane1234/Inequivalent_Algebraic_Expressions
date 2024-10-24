@@ -1,25 +1,20 @@
-package counting_operations.Java_Version;
+package com.github.gkane1234;
 import java.util.*;
 
 public class Expression {
+    private static final int ROUNDING=7;
     public byte[] values;
     public byte[] operations;
     public boolean[] order;
-    private boolean genericExpression;
-    private Integer rounding;
-    private double value;
-
-    public Expression(byte[] values,byte[] operations,boolean[] order, int rounding, boolean genericExpression) {
+    public Expression(byte[] values,byte[] operations,boolean[] order) {
 
         this.values=values;
         this.operations=operations;
         this.order=order;
-        this.rounding = rounding;
-        this.genericExpression=genericExpression;
     }
 
     public Expression(Expression expression) {
-        this(expression.values,expression.operations,expression.order,expression.rounding,expression.genericExpression);
+        this(expression.values,expression.operations,expression.order);
     }
 
 
@@ -29,16 +24,16 @@ public class Expression {
             newValues[i]=values[this.values[i]];
         }
 
-        return new Expression(newValues,this.operations,this.order,this.rounding,genericExpression);
+        return new Expression(newValues,this.operations,this.order);
     }
 
-    public double evaluate_with_values(double[] values) {
+    public double evaluate_with_values(double[] values,int rounding) {
         double[] newValues = new double[values.length];
         for (byte i=0;i<values.length;i++) {
             newValues[i]=values[this.values[i]];
         }
 
-        double val = this.evaluate(newValues);
+        double val = this.evaluate(newValues,rounding);
 
         return val;
 
@@ -52,25 +47,13 @@ public class Expression {
     
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof Expression) {
-            Expression other = (Expression) obj;
-            return this.values.equals(other.values)&&this.operations==other.operations&&this.order==other.order;
-        } else {
-            return this.value==(double)obj;
-        }
-    }
-    public double getValue() {
-        return this.value;
-        
+
+
+    private double evaluate(double[] values,int rounding) {
+        return evaluateRpn(values,rounding);
     }
 
-    public double evaluate(double[] values) {
-        return evaluateRpn(values);
-    }
-
-    public double evaluateRpn(double[] values) {
+    public double evaluateRpn(double[] values,int rounding) {
         DoubleArrayStack stack = new DoubleArrayStack(this.order.length);
         byte values_pointer =0;
         byte operations_pointer = 0;
@@ -93,10 +76,7 @@ public class Expression {
             }
         }
         double nonRounded = stack.pop();
-        if (this.rounding==null) {
-            return nonRounded;
-        }
-        return Math.round(nonRounded * Math.pow(10, this.rounding)) / Math.pow(10, this.rounding);
+        return Math.round(nonRounded * Math.pow(10, rounding)) / Math.pow(10,rounding);
     }
 
     public static String convertToParenthetical(Expression expression) {
@@ -148,7 +128,7 @@ public class Expression {
         boolean[] new_order =combine_with_extra_spot(expr1.order,expr2.order);
         new_order[new_order.length-1]=false;
 
-        return new Expression(newValues, new_operations, new_order, expr1.rounding,expr1.genericExpression);
+        return new Expression(newValues, new_operations, new_order);
 
     }
     public static byte[] combine(byte[] arr1, byte[] arr2) {

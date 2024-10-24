@@ -1,5 +1,4 @@
-package counting_operations.Java_Version;
-
+package com.github.gkane1234;
 import java.math.BigInteger;
 import java.util.Arrays;
 
@@ -19,6 +18,9 @@ public class Counter {
     public static BigInteger run(int num) {
         n = num;
         init(num);
+        if (num==1) {
+            return BigInteger.ONE;
+        }
         for (int i = 2; i <= num; i++) {
             count(i);
         }

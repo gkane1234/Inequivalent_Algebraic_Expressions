@@ -1,23 +1,21 @@
-package counting_operations.Java_Version;
+package com.github.gkane1234;
 
-public class ArrayStack<T> {
-    private T[] stack;
+public class DoubleArrayStack {
+    private double[] stack;
     private int topPointer; 
     private int maxSize;
 
-    @SuppressWarnings("unchecked")
-    public ArrayStack(int maxSize) {
+    public DoubleArrayStack(int maxSize) {
         this.maxSize = maxSize;
-        this.stack = (T[]) new Object[maxSize];  // Generic array creation
+        this.stack = new double[maxSize];
         this.topPointer = -1;  // Stack is initially empty
     }
-
-    // Default constructor that initializes to a stack of size 10
-    public ArrayStack() {
+    //default to 10
+    public DoubleArrayStack() {
         this(10);
     }
 
-    public void push(T value) {
+    public void push(double value) {
         if (topPointer < maxSize - 1) {  // Check for overflow
             stack[++topPointer] = value;
         } else {
@@ -25,7 +23,7 @@ public class ArrayStack<T> {
         }
     }
 
-    public T pop() {
+    public double pop() {
         if (topPointer >= 0) {  // Check for underflow
             return stack[topPointer--];
         } else {
@@ -33,7 +31,7 @@ public class ArrayStack<T> {
         }
     }
 
-    public T peek() {
+    public double peek() {
         if (topPointer >= 0) {
             return stack[topPointer];
         } else {
@@ -42,8 +40,9 @@ public class ArrayStack<T> {
     }
 
     public int size() {
-        return topPointer + 1;
+        return topPointer+1;
     }
+
 
     public boolean isEmpty() {
         return topPointer == -1;
@@ -53,4 +52,3 @@ public class ArrayStack<T> {
         return topPointer == maxSize - 1;
     }
 }
-

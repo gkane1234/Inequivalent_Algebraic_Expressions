@@ -1,12 +1,14 @@
-package counting_operations.Java_Version;
+package com.github.gkane1234;
 public class Solution{
     private static final int DECIMAL_PLACES = 3;
     private double[] subValues;
+    private double goal;
     private Expression expression;
     
-    public Solution(Expression expression, double[] subValues) {
+    public Solution(Expression expression, double[] subValues,double goal) {
         this.expression=expression;
         this.subValues=subValues;
+        this.goal = goal;
     }
 
     public String display() {
@@ -29,7 +31,11 @@ public class Solution{
                 stack.push(combinedExpression);
             }   
         }
-        return stack.peek();
+        return stack.peek()+" to make: "+String.valueOf(this.goal);
+    }
+
+    public double[] getValues() {
+        return this.subValues;
     }
 
     @Override

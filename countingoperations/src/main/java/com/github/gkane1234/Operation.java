@@ -1,5 +1,6 @@
-package counting_operations.Java_Version;
-import java.util.function.BiFunction;
+package com.github.gkane1234;
+
+import java.util.function.DoubleBinaryOperator;
 
 public class Operation {
     public static Operation[] OPERATIONS = new Operation[] {
@@ -12,18 +13,18 @@ public class Operation {
         OPERATIONS=newOperations;
     }
 
-    private BiFunction<Double, Double, Double> operationFunction;
+    private DoubleBinaryOperator operationFunction;
     private boolean commutative;
     private char name;
 
-    public Operation(BiFunction<Double, Double, Double> operationFunction, boolean commutative,char name) {
+    public Operation(DoubleBinaryOperator operationFunction, boolean commutative,char name) {
         this.name=name;
         this.commutative = commutative;
         this.operationFunction = operationFunction;
     }
 
     public double apply(double a, double b) {
-        return operationFunction.apply(a, b);
+        return operationFunction.applyAsDouble(a, b);
     }
     public Boolean isCommutative(){
         return this.commutative;
