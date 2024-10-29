@@ -1,6 +1,5 @@
 package com.github.gkane1234;
 
-import java.util.List;
 import java.util.Scanner;
 
 public class CountingMain {
@@ -23,11 +22,41 @@ public class CountingMain {
         //ExpressionList expressionList = expressionDynamic.getExpressionList();
         //{791,27,18632,1,19.315,-793.2,-8537.214}
         Scanner scanner = new Scanner(System.in);
-        
 
         int numValues = 6;
-        Solver s = new Solver(numValues); 
-        System.out.println((s.findFirstInRange(new double[]{2,3,5,7,11,13}, 1, true, true)));
+        Solver s = new Solver(numValues); // Assuming Solver is defined elsewhere
+
+        double[] values = new double[numValues];
+        int[] range = {0, 10000}; // Your predefined range
+
+
+        while (true) {
+            System.out.println("Enter " + numValues + " values (type 'q' to quit):");
+            boolean exitLoop = false;
+
+            // Loop to get user inputs for the array
+            for (int i = 0; i < numValues; i++) {
+                if (scanner.hasNextDouble()) {
+                    values[i] = scanner.nextDouble();
+                } else if (scanner.hasNext("q")) {
+                    exitLoop = true;
+                    break;
+                } else {
+                    System.out.println("Invalid input, please enter a valid double or 'q' to quit.");
+                    scanner.next(); // Clear the invalid input
+                    i--; // Decrease index to retry for the same position
+                }
+            }
+
+            if (exitLoop) {
+                break; // Exit the loop if the user types 'q'
+            }
+
+            // Call the solver method after input
+            System.out.println("First in range: " + s.findFirstInRange(values, range, true,true));
+        }
+
+        scanner.close();
         /* 
         while (true) {
             System.out.print("Enter a new goal value (or type 'exit' to quit): ");

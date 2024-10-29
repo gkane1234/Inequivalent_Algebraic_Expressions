@@ -37,6 +37,9 @@ public class Solution{
     public double[] getValues() {
         return this.subValues;
     }
+    public double getGoal() {
+        return this.goal;
+    }
 
     @Override
     public String toString() {

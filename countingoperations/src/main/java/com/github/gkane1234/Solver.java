@@ -19,20 +19,20 @@ public class Solver {
         this.numValues=numValues;
     }
 
-    public ArrayList<Solution> findAllSolutions(double[] values, double goal) {
-        ArrayList<Solution> solutions = new ArrayList<>();
+    public SolutionSet findAllSolutions(double[] values, double goal) {
+        SolutionSet solutions = new SolutionSet(goal);
         for (int i=0;i<solverList.getNumExpressions();i++) {
             if (Solver.equal(solverList.getExpressions()[i].evaluate_with_values(values,solverList.rounding),goal)) {
-                    solutions.add(new Solution(solverList.getExpressions()[i],values,goal));
+                    solutions.addSolution(new Solution(solverList.getExpressions()[i],values,goal));
             }
-            if (solutions.size()>MAX_SOLUTIONS) {
+            if (solutions.getNumSolutions()>MAX_SOLUTIONS) {
                 i=solverList.getNumExpressions();
             }
         }
         return solutions;
     }
 
-    public ArrayList<Solution> findAllSolutions(int[] values, double goal) {
+    public SolutionSet findAllSolutions(int[] values, double goal) {
         double[] doubleValues = new double[values.length];
         for (int i=0;i<values.length;i++) {
             doubleValues[i]=(double)values[i];
@@ -50,10 +50,10 @@ public class Solver {
         return null;
     }
 
-    public List<List<Solution>> findSolvableValues(int numSolutions,double goal, int[] valueRange, int[] solutionRange) {
+    public List<SolutionSet> findSolvableValues(int numSolutions,double goal, int[] valueRange, int[] solutionRange) {
         Random r = new Random();
 
-        List<List<Solution>> solvables = new ArrayList<>();
+        List<SolutionSet> solvables = new ArrayList<>();
 
         int attempts =0;
     
@@ -61,9 +61,9 @@ public class Solver {
             attempts++;
             int[] nextAttempt = r.ints(numValues, valueRange[0], valueRange[1]).toArray();
     
-            List<Solution> solutions = findAllSolutions(nextAttempt, goal);
+            SolutionSet solutions = findAllSolutions(nextAttempt, goal);
             
-            if (solutionRange[0] <= solutions.size() && solutions.size() <= solutionRange[1]) {
+            if (solutionRange[0] <= solutions.getNumSolutions() && solutions.getNumSolutions() <= solutionRange[1]) {
                 solvables.add(solutions);
                 System.out.println(attempts);
                 attempts=0;
@@ -72,14 +72,14 @@ public class Solver {
     
         return solvables; 
     }
-    public List<List<Solution>> findSolvableValues(int numSolutions) {
+    public List<SolutionSet> findSolvableValues(int numSolutions) {
         int[] defualtRange = new int[]{1,15};
         int[] defaultSolutionRange = new int[]{1,100*this.numValues};
         double defaultGoal = 24d;
         return findSolvableValues(numSolutions,defaultGoal,defualtRange,defaultSolutionRange);
     }
 
-    public int findFirstInRange(double[] values,int startingValue,boolean works,boolean output) {
+    public int findFirstInRange(double[] values,int[] valueRange,boolean works,boolean output) {
         //TODO: Fix implementation, as it currently does not find the correct number!
         // If works is true: Returns the first value that can be created using the values
         // If works is false: Returns the first value that cannot be created if works
@@ -99,13 +99,19 @@ public class Solver {
             
             
         }
-        CountingMain.print(intSet.toArray());
-        int i = startingValue;
+        int i = valueRange[0];
+        int delta = valueRange[0]<valueRange[1]? 1: -1;
         while (true){
-            boolean inside  = intSet.contains(i++);
+            boolean inside  = intSet.contains(i);
+            i+=delta;
             if (output) {
-                System.out.println(outputs.get(i));
-            }
+                    System.out.print(i);
+                    System.out.print(" ");
+                    System.out.println(outputs.get(i));
+
+                }
+                
+            
             if (inside!=works) {
                 return i;
             }

@@ -1,7 +1,10 @@
 package com.github.gkane1234;
 import java.util.Random;
+import java.util.List;
 
 import gnu.trove.set.hash.TFloatHashSet;
+import gnu.trove.set.hash.TCustomHashSet;
+import gnu.trove.strategy.HashingStrategy;
 
 public class ExpressionList {
     private Expression[] expressions;
@@ -11,6 +14,7 @@ public class ExpressionList {
     public boolean genericExpressions;
 
     private TFloatHashSet[] seen;
+    //private TCustomHashSet<Float>[] seen;
     private double[][] truncators;
     public int numTruncators;
     public Operation[] ops;
@@ -32,6 +36,9 @@ public class ExpressionList {
         this.genericExpressions = genericExpressions;
 
         this.seen = new TFloatHashSet[numTruncators];
+        //this.seen = new TCustomHashSet[numTruncators];
+        //FloatHashingStrategy strategy = new FloatHashingStrategy();
+
         this.truncators = new double[numTruncators][numValues];
         this.numTruncators = numTruncators;
         
@@ -39,6 +46,7 @@ public class ExpressionList {
         for (int i = 0; i < numTruncators; i++) {
             TFloatHashSet set = new TFloatHashSet();
             seen[i]=set;
+            //seen[i]=new TCustomHashSet<>(strategy);
             double[] truncator = new double[numValues];
             for (int j = 0; j < numValues; j++) {
                 truncator[j] = random.nextDouble();
