@@ -31,7 +31,7 @@ public class Solution{
                 stack.push(combinedExpression);
             }   
         }
-        return stack.peek()+" to make: "+String.valueOf(this.goal);
+        return stack.peek();
     }
 
     public double[] getValues() {

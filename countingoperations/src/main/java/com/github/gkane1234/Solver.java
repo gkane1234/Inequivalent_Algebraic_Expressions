@@ -20,7 +20,7 @@ public class Solver {
     }
 
     public SolutionSet findAllSolutions(double[] values, double goal) {
-        SolutionSet solutions = new SolutionSet(goal);
+        SolutionSet solutions = new SolutionSet(values,goal);
         for (int i=0;i<solverList.getNumExpressions();i++) {
             if (Solver.equal(solverList.getExpressions()[i].evaluate_with_values(values,solverList.rounding),goal)) {
                     solutions.addSolution(new Solution(solverList.getExpressions()[i],values,goal));
@@ -35,7 +35,7 @@ public class Solver {
     public SolutionSet findAllSolutions(int[] values, double goal) {
         double[] doubleValues = new double[values.length];
         for (int i=0;i<values.length;i++) {
-            doubleValues[i]=(double)values[i];
+            doubleValues[i]=values[i];
         }
         return findAllSolutions(doubleValues,goal);
 
@@ -48,6 +48,15 @@ public class Solver {
             }
         }
         return null;
+    }
+    
+    public Solution findFirstSolution(int[] values, double goal) {
+        double[] doubleValues = new double[values.length];
+        for (int i=0;i<values.length;i++) {
+            doubleValues[i]=values[i];
+        }
+        return findFirstSolution(doubleValues, goal);
+
     }
 
     public List<SolutionSet> findSolvableValues(int numSolutions,double goal, int[] valueRange, int[] solutionRange) {
@@ -79,8 +88,40 @@ public class Solver {
         return findSolvableValues(numSolutions,defaultGoal,defualtRange,defaultSolutionRange);
     }
 
+    public List<SolutionSet> findAllPossibleSolvableValuesInRange(int[] range,double goal,boolean findAllSolutions) {
+        //Finds all possible solvable sets of numbers to make the goal
+        // Will do so only returning values in non-descreasing order
+        RangeIterator allValuesInRangeIterator = new RangeIterator(range, this.numValues);
+        List<SolutionSet> solvables = new ArrayList<>();
+        SolutionSet nextSolutionSet;
+        int tracker = 0;
+        while (allValuesInRangeIterator.hasNext()) {
+            int[] values = allValuesInRangeIterator.next();
+            if (++tracker%1000==0) {
+                CountingMain.print(values);
+            }
+            if (findAllSolutions) {
+                nextSolutionSet = findAllSolutions(values, goal);
+            } else {
+                Solution firstSolution = findFirstSolution(values, goal);
+                nextSolutionSet = new SolutionSet(values,goal);
+                if (firstSolution!=null) {
+                    nextSolutionSet.addSolution(firstSolution);
+                }
+            }
+            solvables.add(nextSolutionSet);
+        }
+
+        return solvables;
+
+        
+
+
+
+
+    }
+
     public int findFirstInRange(double[] values,int[] valueRange,boolean works,boolean output) {
-        //TODO: Fix implementation, as it currently does not find the correct number!
         // If works is true: Returns the first value that can be created using the values
         // If works is false: Returns the first value that cannot be created if works
         TIntHashSet intSet = new TIntHashSet();

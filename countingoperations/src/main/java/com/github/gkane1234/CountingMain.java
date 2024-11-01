@@ -1,6 +1,6 @@
 package com.github.gkane1234;
 
-import java.util.Scanner;
+import java.util.List;
 
 public class CountingMain {
     public static void main(String[] args) {
@@ -21,42 +21,21 @@ public class CountingMain {
         //ExpressionDynamic expressionDynamic = new ExpressionDynamic(numValues, 6, 8, null);
         //ExpressionList expressionList = expressionDynamic.getExpressionList();
         //{791,27,18632,1,19.315,-793.2,-8537.214}
-        Scanner scanner = new Scanner(System.in);
+        //System.out.println(CountingPossibilities.numberOfDistinctSetsOfNumbersWhereOrderDoesNotMatter(10,100));
+        int numValues = 4;
+        Solver s = new Solver(numValues); 
+        int[] range = {1, 20};
+        List<SolutionSet> allSolutions = s.findAllPossibleSolvableValuesInRange(range, 24, true);
 
-        int numValues = 6;
-        Solver s = new Solver(numValues); // Assuming Solver is defined elsewhere
+        SolutionWriter solutionWriter = new SolutionWriter("counting_operations/outputs", allSolutions, false);
+        solutionWriter.createFile();
 
-        double[] values = new double[numValues];
-        int[] range = {0, 10000}; // Your predefined range
+        
 
+        
+        
 
-        while (true) {
-            System.out.println("Enter " + numValues + " values (type 'q' to quit):");
-            boolean exitLoop = false;
-
-            // Loop to get user inputs for the array
-            for (int i = 0; i < numValues; i++) {
-                if (scanner.hasNextDouble()) {
-                    values[i] = scanner.nextDouble();
-                } else if (scanner.hasNext("q")) {
-                    exitLoop = true;
-                    break;
-                } else {
-                    System.out.println("Invalid input, please enter a valid double or 'q' to quit.");
-                    scanner.next(); // Clear the invalid input
-                    i--; // Decrease index to retry for the same position
-                }
-            }
-
-            if (exitLoop) {
-                break; // Exit the loop if the user types 'q'
-            }
-
-            // Call the solver method after input
-            System.out.println("First in range: " + s.findFirstInRange(values, range, true,true));
-        }
-
-        scanner.close();
+ 
         /* 
         while (true) {
             System.out.print("Enter a new goal value (or type 'exit' to quit): ");
