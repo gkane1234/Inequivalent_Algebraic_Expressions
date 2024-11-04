@@ -17,7 +17,7 @@ public class Solution{
         byte operations_pointer = 0;
         for (boolean isNumber : this.expression.order) {
             if (isNumber) {
-                double next = this.subValues[this.expression.values[values_pointer++]];
+                double next = this.subValues[this.expression.valueOrder[values_pointer++]];
                 if (next == Math.round(next)) {
                     stack.push(String.valueOf(Math.round(next)));
                 } else {
@@ -27,7 +27,7 @@ public class Solution{
                 byte opCode = expression.operations[operations_pointer++];
                 String b = stack.pop();
                 String a = stack.pop();
-                String combinedExpression = "("+a+String.valueOf(Operation.OPERATIONS[opCode])+b+")";
+                String combinedExpression = "("+a+String.valueOf(Operation.getOperations()[opCode])+b+")";
                 stack.push(combinedExpression);
             }   
         }

@@ -1,6 +1,9 @@
 package com.github.gkane1234;
 
 public class ArrayStack<T> {
+    /*
+    A stack implementation using an array.
+    */
     private T[] stack;
     private int topPointer; 
     private int maxSize;

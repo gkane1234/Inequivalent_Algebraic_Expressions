@@ -129,11 +129,21 @@ def get_outcome_and_integers(cursor, value_set_id):
 
 
 # Function to train a model using the data from the database
-def train_model(cursor):
+def train_model_random_forest(cursor,parameters=None):
+    if parameters==None:
+        parameters = {'binary_outcome':False,
+                      'test_size':0.2,
+                      'random_state':42,
+                      'n_estimators':1000,
+                      'verbose':2,
+                      }
     print("Training model...")
     # Fetch data from the database
     cursor.execute("SELECT outcome FROM number_sets")
-    outcomes = cursor.fetchall()
+    if parameters['binary_outcome']:
+        outcomes = [(1,) if outcome[0] > 0 else (0,) for outcome in cursor.fetchall()]
+    else:
+        outcomes = cursor.fetchall()
     
     cursor.execute("SELECT * FROM reference_dict")
     integers = cursor.fetchall()
@@ -143,7 +153,49 @@ def train_model(cursor):
     y = np.array([outcome[0] for outcome in outcomes])
 
     # Split the data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=parameters['test_size'], random_state=parameters['random_state'])
+
+    # Create and train the model
+
+    model = RandomForestRegressor(n_estimators=parameters['n_estimators'], random_state=parameters['random_state'],verbose=parameters['verbose'])
+    model.fit(X_train, y_train)
+
+    # Evaluate the model
+    score = model.score(X_test, y_test)
+    print(f"Model R^2 score: {score}")
+    return model
+
+
+def train_model_neural_network(cursor,parameters=None):
+
+    if parameters==None:
+        parameters = {'epochs':10,
+              'batch_size':4,
+              'validation_split':0.2,
+              'hidden_layers':[64]*16,
+              'dropout':[0]*15,
+              'binary_outcome':False,
+              'test_size':0.2,
+              'random_state':42,
+              'early_stopping':True,
+              }
+    print("Training model...")
+    # Fetch data from the database
+    cursor.execute("SELECT outcome FROM number_sets")
+    if parameters['binary_outcome']:
+        outcomes = [(1,) if outcome[0] > 0 else (0,) for outcome in cursor.fetchall()]
+    else:
+        outcomes = cursor.fetchall()
+    
+    cursor.execute("SELECT * FROM reference_dict")
+    integers = cursor.fetchall()
+
+    # Prepare the data
+    X = np.array([list(row[1:]) for row in integers])  # Assuming the first column is an ID
+    y = np.array([outcome[0] for outcome in outcomes])
+
+    # Split the data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=parameters['test_size'], random_state=parameters['random_state'])
 
     # Create and train the model
     '''
@@ -157,18 +209,22 @@ def train_model(cursor):
     '''
 
     #Create a neural network model
-    model = keras.Sequential([
-        layers.Dense(64, activation='relu', input_shape=(X_train.shape[1],)),  # Input layer
-        layers.Dense(256, activation='relu'),  # Hidden layer
-        layers.Dense(128, activation='relu'),
-        layers.Dense(1)  # Output layer
-    ])
+    layers_list = [layers.Dense(parameters['hidden_layers'][0], activation='relu', input_shape=(X_train.shape[1],))]
+    for i in range(1,len(parameters['hidden_layers'])):
+        layers_list.append(layers.Dense(parameters['hidden_layers'][i], activation='relu'))
+        layers_list.append(layers.Dropout(parameters['dropout'][i-1]))
+    layers_list.append(layers.Dense(1))
+    model = keras.Sequential(layers_list)
 
     # Compile the model
     model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae'])
 
     # Train the model
-    model.fit(X_train, y_train, epochs=1000, batch_size=64, validation_split=0.2)
+    if parameters['early_stopping']:
+        early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
+        model.fit(X_train, y_train, epochs=parameters['epochs'], batch_size=parameters['batch_size'], validation_split=parameters['validation_split'], callbacks=[early_stopping])
+    else:
+        model.fit(X_train, y_train, epochs=parameters['epochs'], batch_size=parameters['batch_size'], validation_split=parameters['validation_split'])
 
     # Evaluate the model
     loss, mae = model.evaluate(X_test, y_test)
@@ -177,13 +233,15 @@ def train_model(cursor):
 
 
 
+
 cursor_number_sets = load_database('counting_operations/outputs/ALL_POSSIBLE_4_Values_1.0_TO_20.0_GOAL_24.0.csv')
 #print(create_reference_dictionary((1,100),4))
-
+#mean absolute error 0.4 with 64,128,64 with binary outcome
+#mean absolute error 0.38 with 64,1024,64 with binary outcome
 
 
 # Call the function to train the model
-model = train_model(cursor_number_sets)
+model = train_model_random_forest(cursor_number_sets)
 while True:
     user_input = input("Enter a list of integers separated by commas (or type 'exit' to quit): ")
     if user_input.lower() == 'exit':

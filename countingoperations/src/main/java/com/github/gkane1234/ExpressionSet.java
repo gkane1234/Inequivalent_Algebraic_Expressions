@@ -1,17 +1,19 @@
 package com.github.gkane1234;
 import java.util.Random;
-import java.util.List;
-
+import java.util.Arrays;
 import gnu.trove.set.hash.TFloatHashSet;
-import gnu.trove.set.hash.TCustomHashSet;
-import gnu.trove.strategy.HashingStrategy;
+public class ExpressionSet {
+    /*
+    A data structure that stores inequivalent expressions.
 
-public class ExpressionList {
+    To be added to the set, an expression is found if it is not equivalent to any of the expressions already in the set,
+    by using a number of tester lists of values, each list being called a truncator.
+
+    */
     private Expression[] expressions;
     private int numExpressions;
     private int numValues;
     public int rounding;
-    public boolean genericExpressions;
 
     private TFloatHashSet[] seen;
     //private TCustomHashSet<Float>[] seen;
@@ -20,10 +22,24 @@ public class ExpressionList {
     public Operation[] ops;
 
     // Constructor
-    public ExpressionList(int numValues, int rounding, int numTruncators,boolean genericExpressions) {
-        this(new Expression[] {}, 0, numValues, rounding, numTruncators, genericExpressions);
+    public ExpressionSet(int numValues, int rounding, int numTruncators) {
+        /*
+        Constructor for an ExpressionSet.
+        numValues: the number of values in the expressions.
+        rounding: the number of decimal places to round to.
+        numTruncators: the number of truncators to use.
+        */
+        this(new Expression[] {}, 0, numValues, rounding, numTruncators);
     }
-    public ExpressionList(Expression[] expressions,int numExpressions,int numValues, int rounding, int numTruncators,boolean genericExpressions) {
+    public ExpressionSet(Expression[] expressions,int numExpressions,int numValues, int rounding, int numTruncators) {
+        /*
+        Constructor for an ExpressionSet.
+        expressions: expressions that have already been found to be inequivalent.
+        numExpressions: the number of expressions that are in expressions. (This can differ from the length of expressions)
+        numValues: the number of values in the expressions.
+        rounding: the number of decimal places to round to.
+        numTruncators: the number of truncators to use.
+        */
         if (expressions.length==0) {
             this.expressions=new Expression[getMaximumSize(numValues)];
             this.numExpressions=0;
@@ -33,7 +49,6 @@ public class ExpressionList {
         }
         this.numValues = numValues;
         this.rounding = rounding;
-        this.genericExpressions = genericExpressions;
 
         this.seen = new TFloatHashSet[numTruncators];
         //this.seen = new TCustomHashSet[numTruncators];
@@ -61,17 +76,15 @@ public class ExpressionList {
     public int getNumValues() {
         return this.numValues;
     }
-    // Getter for a specific expression (equivalent to __getitem__)
     public Expression get(int i) {
         return this.expressions[i];
     }
 
-    // Length of the expression list (equivalent to __len__)
     public int size() {
         return this.numExpressions;
     }
 
-    // Iterating over expressions (equivalent to __iter__)
+
     public Expression[] getExpressions() {
         return expressions;
     }
@@ -80,21 +93,20 @@ public class ExpressionList {
     }
     
 
-    // String representation (equivalent to __str__ and __repr__)
+
     @Override
     public String toString() {
-        return expressions.toString();
+        return Arrays.toString(expressions);
     }
 
-    public ExpressionList evaluate(byte[] values) {
-        return createEvaluatedExpressionList(this, values, this.numTruncators);
+    public ExpressionSet changeValueOrders(byte[] valueOrder) {
+        return createEvaluatedExpressionSet(this, valueOrder, this.numTruncators);
     }
 
-    // Add an expression to the list
     public boolean add(Expression expression) {
         boolean toAdd = false;
         for (int i = 0; i < this.numTruncators; i++) {
-            double value = expression.evaluate_with_values(this.truncators[i],this.rounding);
+            double value = expression.evaluateWithValues(this.truncators[i],this.rounding);
             if (!Double.isNaN(value) && seen[i].add((float)value)) {
                 toAdd = true;  
             }
@@ -108,17 +120,14 @@ public class ExpressionList {
 
 
     // Static method to create a new expression list with the given values
-    public static ExpressionList createEvaluatedExpressionList(ExpressionList genericExpressionList, byte[] values, int numTruncators) throws IllegalStateException {
+    public static ExpressionSet createEvaluatedExpressionSet(ExpressionSet genericExpressionSet, byte[] value_order, int numTruncators) throws IllegalStateException {
         
-        if (!genericExpressionList.genericExpressions) {
-            throw new IllegalStateException("Input must be a generic expression list");
-        }
-        Expression[] newExpressions = new Expression[genericExpressionList.expressions.length];
-        for (int i=0;i<genericExpressionList.numExpressions;i++) {
-            newExpressions[i]=genericExpressionList.expressions[i].change_values(values);
+        Expression[] newExpressions = new Expression[genericExpressionSet.expressions.length];
+        for (int i=0;i<genericExpressionSet.numExpressions;i++) {
+            newExpressions[i]=genericExpressionSet.expressions[i].changeValueOrder(value_order);
             
         }
-        return new ExpressionList(newExpressions, genericExpressionList.numExpressions,genericExpressionList.numValues, genericExpressionList.rounding, numTruncators,true);
+        return new ExpressionSet(newExpressions, genericExpressionSet.numExpressions,genericExpressionSet.numValues, genericExpressionSet.rounding, numTruncators);
     }
 
 }

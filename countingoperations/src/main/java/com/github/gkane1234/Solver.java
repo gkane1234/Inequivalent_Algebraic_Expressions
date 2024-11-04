@@ -11,22 +11,22 @@ public class Solver {
     private static final double TOLERANCE = 1e-5;
     private static final int MAX_ATTEMPTS = 1000;
     private static final int MAX_SOLUTIONS = 200;
-    ExpressionList solverList;
+    ExpressionSet solverSet;
     private int numValues;
     Solver(int numValues){
-        solverList = new ExpressionDynamic(numValues,7,5,null).getExpressionList();
-        System.err.println(solverList.size());
+        solverSet = new ExpressionDynamic(numValues,7,5,null).getExpressionSet();
+        System.err.println(solverSet.size());
         this.numValues=numValues;
     }
 
     public SolutionSet findAllSolutions(double[] values, double goal) {
         SolutionSet solutions = new SolutionSet(values,goal);
-        for (int i=0;i<solverList.getNumExpressions();i++) {
-            if (Solver.equal(solverList.getExpressions()[i].evaluate_with_values(values,solverList.rounding),goal)) {
-                    solutions.addSolution(new Solution(solverList.getExpressions()[i],values,goal));
+        for (int i=0;i<solverSet.getNumExpressions();i++) {
+            if (Solver.equal(solverSet.get(i).evaluateWithValues(values,solverSet.rounding),goal)) {
+                    solutions.addSolution(new Solution(solverSet.get(i),values,goal));
             }
             if (solutions.getNumSolutions()>MAX_SOLUTIONS) {
-                i=solverList.getNumExpressions();
+                i=solverSet.getNumExpressions();
             }
         }
         return solutions;
@@ -42,9 +42,9 @@ public class Solver {
     }
 
     public Solution findFirstSolution(double[] values, double goal) {
-        for (int i=0;i<solverList.getNumExpressions();i++) {
-            if (Solver.equal(solverList.get(i).evaluate_with_values(values,solverList.rounding),goal)) {
-                return new Solution(solverList.get(i),values,goal);
+        for (int i=0;i<solverSet.getNumExpressions();i++) {
+            if (Solver.equal(solverSet.get(i).evaluateWithValues(values,solverSet.rounding),goal)) {
+                return new Solution(solverSet.get(i),values,goal);
             }
         }
         return null;
@@ -127,14 +127,14 @@ public class Solver {
         TIntHashSet intSet = new TIntHashSet();
         TIntObjectHashMap <Solution> outputs = new TIntObjectHashMap<>();
 
-        for (int i=0;i<solverList.getNumExpressions();i++) {
-            double answer = solverList.get(i).evaluate_with_values(values,solverList.rounding);
+        for (int i=0;i<solverSet.getNumExpressions();i++) {
+            double answer = solverSet.get(i).evaluateWithValues(values,solverSet.rounding);
             if (Solver.equal(answer, Math.round(answer))) {
                 int wholeNumberAnswer = (int)Math.round(answer);
                 
                 //System.err.println(wholeNumberAnswer);
                 if (intSet.add(wholeNumberAnswer)&&output) {
-                    outputs.put(wholeNumberAnswer, new Solution(solverList.get(i), values, wholeNumberAnswer));
+                    outputs.put(wholeNumberAnswer, new Solution(solverSet.get(i), values, wholeNumberAnswer));
                 }
             }
             
