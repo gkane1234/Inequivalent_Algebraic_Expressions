@@ -1,7 +1,7 @@
 package com.github.gkane1234;
 import java.util.Random;
 import java.util.Arrays;
-import gnu.trove.set.hash.TFloatHashSet;
+
 public class ExpressionSet {
     /*
     A data structure that stores inequivalent expressions.
@@ -15,7 +15,7 @@ public class ExpressionSet {
     private int numValues;
     public int rounding;
 
-    private TFloatHashSet[] seen;
+    private CustomFloatHashSet[] seen;
     //private TCustomHashSet<Float>[] seen;
     private double[][] truncators;
     public int numTruncators;
@@ -50,7 +50,7 @@ public class ExpressionSet {
         this.numValues = numValues;
         this.rounding = rounding;
 
-        this.seen = new TFloatHashSet[numTruncators];
+        this.seen = new CustomFloatHashSet[numTruncators];
         //this.seen = new TCustomHashSet[numTruncators];
         //FloatHashingStrategy strategy = new FloatHashingStrategy();
 
@@ -59,7 +59,7 @@ public class ExpressionSet {
         
         Random random = new Random();
         for (int i = 0; i < numTruncators; i++) {
-            TFloatHashSet set = new TFloatHashSet();
+            CustomFloatHashSet set = new CustomFloatHashSet();
             seen[i]=set;
             //seen[i]=new TCustomHashSet<>(strategy);
             double[] truncator = new double[numValues];

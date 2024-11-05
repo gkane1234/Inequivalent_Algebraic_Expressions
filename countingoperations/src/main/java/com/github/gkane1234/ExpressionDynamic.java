@@ -129,7 +129,6 @@ public class ExpressionDynamic {
         /*
         Generates all combinations of length 'size' from a range of numbers [0, n).
         */
-        System.out.println(String.format("Generating %d combinations of size %d from %d numbers", binomialCoefficient(n, size), size, n));
         TByteHashSet[] combinations = new TByteHashSet[binomialCoefficient(n, size)];
         int[] combinationIndex = {0}; // Use array to track current index, as it is mutable
         generateCombinationsRecursive(combinations, new TByteHashSet(size), 0, 0, n, size, combinationIndex);
@@ -140,7 +139,6 @@ public class ExpressionDynamic {
         /*
         Recursively generates combinations.
         */
-        System.out.println(String.format("Generating combinations: %d of %d", index, size));
         if (index == size) {
             combinations[combinationIndex[0]++] = new TByteHashSet(combination); // Store a copy and increment index
             return;

@@ -1,5 +1,6 @@
 package com.github.gkane1234;
 
+import java.util.List;
 public class CountingMain {
     public static void main(String[] args) {
 
@@ -20,11 +21,14 @@ public class CountingMain {
         //ExpressionList expressionList = expressionDynamic.getExpressionList();
         //{791,27,18632,1,19.315,-793.2,-8537.214}
         //System.out.println(CountingPossibilities.numberOfDistinctSetsOfNumbersWhereOrderDoesNotMatter(10,100));
-        int numValues = 4;
-        ExpressionDynamic expressionDynamic = new ExpressionDynamic(numValues, 7, 8, null);
-        ExpressionSet expressionSet = expressionDynamic.getExpressionSet();
-        System.out.println(expressionSet);
-        int[] range = {1, 20};
+        int numValues = 6;
+        Solver s = new Solver(numValues);
+        int[] range = {1,13};
+        List<SolutionSet> questions = s.findSolvableValues(10,137,range,new int[]{1,10000});
+        for (SolutionSet question : questions) {
+            System.out.println(question);
+        }
+
 
         /*
         Solver s = new Solver(numValues); 

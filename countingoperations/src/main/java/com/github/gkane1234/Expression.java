@@ -130,7 +130,7 @@ public class Expression {
         expression: the parenthetical string to convert.
         */
         //TODO: implement this method
-        return null;
+        throw new UnsupportedOperationException("Not implemented");
     }
     //combined a helper function in order to make the code run more efficiently
     public static Expression[] createCombinedExpressions(Expression expression1, Expression expression2) {

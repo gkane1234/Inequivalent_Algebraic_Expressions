@@ -3,6 +3,11 @@ import java.math.BigInteger;
 import java.util.Arrays;
 
 public class Counter {
+    /*
+     * This is a Java implementation of the counting algorithm found here: https://oeis.org/A140606
+     * Used to count the number of inequivalent expressions that can be made with n and the standard 4 operations.
+     * There is apparently a mathematical proof that describes the algorithm, but I have not yet been able to find it, as the link on the OEIS page is dead.
+     */
 
     // Define class-level variables
     private static BigInteger[] sc;

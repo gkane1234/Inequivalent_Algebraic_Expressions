@@ -1,7 +1,9 @@
 
 package com.github.gkane1234;
-
-public class CustomFloatHashSet {
+import gnu.trove.impl.HashFunctions;
+import gnu.trove.set.hash.TFloatHashSet;
+import gnu.trove.impl.hash.TFloatHash;
+public class CustomFloatHashSet extends TFloatHashSet {
     private static final int DEFAULT_CAPACITY = 16;
     private static final float LOAD_FACTOR = 0.75f;
 
@@ -9,88 +11,174 @@ public class CustomFloatHashSet {
     private static final double MAX_EXPECTED = Math.pow(2, 10);
 
     private float[] table;
-    private boolean[] used;
-    private int size;
+
 
     public CustomFloatHashSet() {
-        table = new float[DEFAULT_CAPACITY];
-        used = new boolean[DEFAULT_CAPACITY];
-        size = 0;
+        super(DEFAULT_CAPACITY, LOAD_FACTOR);
     }
 
-    private int computeHashCode(float value) {
-        // Step 1: Center around 0.5 and calculate absolute distance
-        double distanceFromCenter = Math.abs(value - CENTER); // Distance from 0.5
-        double scaledValue = distanceFromCenter / MAX_EXPECTED;
-
-        // Step 2: Apply log transformation for compression
-        float compressedValue = (float)Math.log1p(scaledValue); // log1p(x) = log(1 + x)
-
-        // Step 3: Convert to hash, including original sign to distinguish sides of 0.5
-        int bits = Float.floatToIntBits(compressedValue); // Get raw bits of compressed value
-        int hash = (int)(bits ^ (bits >>> 32)); // XOR upper and lower halves for better mixing
-
-        // Step 4: Add sign bit information
-        if (value < CENTER) {
-            hash = ~hash; // Flip bits if value is on the negative side of the center
-        }
-
-        // Additional mixing of the hash
-        hash ^= (hash >>> 16);
-        hash *= 0x85ebca6b; // Multiply by a prime for further mixing
-        return hash;
+    /**
+     * Returns a hashcode for the specified value.
+     *
+     * @return  a hash code value for the specified value.
+     */
+    public static int hash(float value) {
+        assert !Float.isNaN(value) : "Values of NaN are not supported.";
+        //float compressedValue = (float)Math.log1p(Math.abs(value) / MAX_EXPECTED);
+        return Float.floatToIntBits(value*663608941.737f);
+        // this avoids excessive hashCollisions in the case values are
+        // of the form (1.0, 2.0, 3.0, ...)
     }
 
-    private int indexForHash(int hash) {
-        return hash & (table.length - 1);
-    }
 
+    @Override
     public boolean add(float value) {
-        if (size >= table.length * LOAD_FACTOR) {
-            resize();
+        int index = insertKey(value);
+
+        if (index >= 0) {
+            return false;
         }
+        postInsertHook(consumeFreeSlot);
 
-        int hash = computeHashCode(value);
-        int index = indexForHash(hash);
-
-        while (used[index]) {
-            if (Float.compare(table[index], value) == 0) {
-                return false;  // Value already in the set
-            }
-            index = (index + 1) % table.length;
-        }
-
-        table[index] = value;
-        used[index] = true;
-        size++;
         return true;
     }
 
-    public boolean contains(float value) {
-        int hash = computeHashCode(value);
-        int index = indexForHash(hash);
+        /**
+     * Locates the index of <tt>val</tt>.
+     *
+     * @param val an <code>float</code> value
+     * @return the index of <tt>val</tt> or -1 if it isn't in the set.
+     */
+    protected int index( float val ) {
+        int hash, probe, index, length;
 
-        while (used[index]) {
-            if (Float.compare(table[index], value) == 0) {
-                return true;
-            }
-            index = (index + 1) % table.length;
-        }
+        final byte[] states = _states;
+        final float[] set = _set;
+        length = states.length;
+        hash = hash( val ) & 0x7fffffff;
+        index = hash % length;
+        byte state = states[index];
 
-        return false;
+        if (state == FREE)
+            return -1;
+
+        if (state == FULL && set[index] == val)
+            return index;
+
+        return indexRehashed(val, index, hash, state);
     }
 
-    private void resize() {
-        float[] oldTable = table;
-        boolean[] oldUsed = used;
-        table = new float[oldTable.length * 2];
-        used = new boolean[oldTable.length * 2];
-        size = 0;
+    int indexRehashed(float key, int index, int hash, byte state) {
+        // see Knuth, p. 529
+        int length = _set.length;
+        int probe = 1 + (hash % (length - 2));
+        final int loopIndex = index;
 
-        for (int i = 0; i < oldTable.length; i++) {
-            if (oldUsed[i]) {
-                add(oldTable[i]);
+        do {
+            index -= probe;
+            if (index < 0) {
+                index += length;
             }
-        }
+            state = _states[index];
+            //
+            if (state == FREE)
+                return -1;
+
+            //
+            if (key == _set[index] && state != REMOVED)
+                return index;
+        } while (index != loopIndex);
+
+        return -1;
     }
+
+
+    /**
+     * Locates the index at which <tt>val</tt> can be inserted.  if
+     * there is already a value equal()ing <tt>val</tt> in the set,
+     * returns that value as a negative integer.
+     *
+     * @param val an <code>float</code> value
+     * @return an <code>int</code> value
+     */
+    protected int insertKey( float val ) {
+        int hash, index;
+
+        hash = hash(val) & 0x7fffffff;
+        index = hash % _states.length;
+        byte state = _states[index];
+
+        consumeFreeSlot = false;
+
+        if (state == FREE) {
+            consumeFreeSlot = true;
+            insertKeyAt(index, val);
+
+            return index;       // empty, all done
+        }
+
+        if (state == FULL && _set[index] == val) {
+            return -index - 1;   // already stored
+        }
+
+        // already FULL or REMOVED, must probe
+        return insertKeyRehash(val, index, hash, state);
+    }
+
+    int insertKeyRehash(float val, int index, int hash, byte state) {
+        // compute the double hash
+        final int length = _set.length;
+        int probe = 1 + (hash % (length - 2));
+        final int loopIndex = index;
+        int firstRemoved = -1;
+
+        /**
+         * Look until FREE slot or we start to loop
+         */
+        do {
+            // Identify first removed slot
+            if (state == REMOVED && firstRemoved == -1)
+                firstRemoved = index;
+
+            index -= probe;
+            if (index < 0) {
+                index += length;
+            }
+            state = _states[index];
+
+            // A FREE slot stops the search
+            if (state == FREE) {
+                if (firstRemoved != -1) {
+                    insertKeyAt(firstRemoved, val);
+                    return firstRemoved;
+                } else {
+                    consumeFreeSlot = true;
+                    insertKeyAt(index, val);
+                    return index;
+                }
+            }
+
+            if (state == FULL && _set[index] == val) {
+                return -index - 1;
+            }
+
+            // Detect loop
+        } while (index != loopIndex);
+
+        // We inspected all reachable slots and did not find a FREE one
+        // If we found a REMOVED slot we return the first one found
+        if (firstRemoved != -1) {
+            insertKeyAt(firstRemoved, val);
+            return firstRemoved;
+        }
+
+        // Can a resizing strategy be found that resizes the set?
+        throw new IllegalStateException("No free or removed slots available. Key set full?!!");
+    }
+
+    void insertKeyAt(int index, float val) {
+        _set[index] = val;  // insert value
+        _states[index] = FULL;
+    }
+
 }
