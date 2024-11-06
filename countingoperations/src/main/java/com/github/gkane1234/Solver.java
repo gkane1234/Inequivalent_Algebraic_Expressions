@@ -7,18 +7,31 @@ import java.util.Random;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.set.hash.TIntHashSet;
 
+/**
+    Solver class for finding solutions for a given goal using a set of values.
+*/
 public class Solver {
     private static final double TOLERANCE = 1e-5;
     private static final int MAX_ATTEMPTS = 1000;
     private static final int MAX_SOLUTIONS = 200;
     ExpressionSet solverSet;
     private int numValues;
-    Solver(int numValues){
-        solverSet = new ExpressionDynamic(numValues,7,5,null).getExpressionSet();
+    /**
+        Constructor for the Solver class.
+        @param numValues: an <code>int</code> representing the number of values to use.
+        @param verbose: a <code>boolean</code> representing whether to print verbose output.
+    */
+    Solver(int numValues,boolean verbose){
+        solverSet = new ExpressionDynamic(numValues,7,5,null,verbose).getExpressionSet();
         System.err.println(solverSet.size());
         this.numValues=numValues;
     }
-
+    /**
+        Finds all solutions for a given goal using a set of values.
+        @param values: an <code>double[]</code> representing the values to use.
+        @param goal: a <code>double</code> representing the goal to find solutions for.
+        @return a <code>SolutionSet</code> representing the solutions found.
+    */
     public SolutionSet findAllSolutions(double[] values, double goal) {
         SolutionSet solutions = new SolutionSet(values,goal);
         for (int i=0;i<solverSet.getNumExpressions();i++) {
@@ -31,7 +44,12 @@ public class Solver {
         }
         return solutions;
     }
-
+    /**
+        Finds all solutions for a given goal using a set of values.
+        @param values: an <code>int[]</code> representing the values to use.
+        @param goal: a <code>double</code> representing the goal to find solutions for.
+        @return a <code>SolutionSet</code> representing the solutions found.
+    */
     public SolutionSet findAllSolutions(int[] values, double goal) {
         double[] doubleValues = new double[values.length];
         for (int i=0;i<values.length;i++) {
@@ -40,7 +58,12 @@ public class Solver {
         return findAllSolutions(doubleValues,goal);
 
     }
-
+    /**
+        Finds upto one solution for a given goal using a set of values.
+        @param values: an <code>double[]</code> representing the values to use.
+        @param goal: a <code>double</code> representing the goal to find solutions for.
+        @return a <code>Solution</code> representing the first solution found.
+    */
     public Solution findFirstSolution(double[] values, double goal) {
         for (int i=0;i<solverSet.getNumExpressions();i++) {
             if (Solver.equal(solverSet.get(i).evaluateWithValues(values,solverSet.rounding),goal)) {
@@ -49,7 +72,12 @@ public class Solver {
         }
         return null;
     }
-    
+    /**
+        Finds upto one solution for a given goal using a set of values.
+        @param values: an <code>int[]</code> representing the values to use.
+        @param goal: a <code>double</code> representing the goal to find solutions for.
+        @return a <code>Solution</code> representing the first solution found.
+    */
     public Solution findFirstSolution(int[] values, double goal) {
         double[] doubleValues = new double[values.length];
         for (int i=0;i<values.length;i++) {
@@ -58,7 +86,14 @@ public class Solver {
         return findFirstSolution(doubleValues, goal);
 
     }
-
+    /**
+        Finds a random set of values that can be used to make a given goal.
+        @param numSolutions: an <code>int</code> representing the number of solutions to find.
+        @param goal: a <code>double</code> representing the goal to find solutions for.
+        @param valueRange: an <code>int[]</code> representing the range of values to use.
+        @param solutionRange: an <code>int[]</code> representing the range of solutions to find.
+        @return a <code>List<SolutionSet></code> representing the solutions found.
+    */
     public List<SolutionSet> findSolvableValues(int numSolutions,double goal, int[] valueRange, int[] solutionRange) {
         Random r = new Random();
 
@@ -81,13 +116,24 @@ public class Solver {
     
         return solvables; 
     }
+    /**
+        Finds a random set of values that can be used to make a given goal.
+        @param numSolutions: an <code>int</code> representing the number of solutions to find.
+        @return a <code>List<SolutionSet></code> representing the solutions found.
+    */
     public List<SolutionSet> findSolvableValues(int numSolutions) {
         int[] defualtRange = new int[]{1,15};
         int[] defaultSolutionRange = new int[]{1,100*this.numValues};
         double defaultGoal = 24d;
         return findSolvableValues(numSolutions,defaultGoal,defualtRange,defaultSolutionRange);
     }
-
+    /**
+        Finds all possible sets of values that can be used to make a given goal.
+        @param range: an <code>int[]</code> representing the range of values to use.
+        @param goal: a <code>double</code> representing the goal to find solutions for.
+        @param findAllSolutions: a <code>boolean</code> representing whether to find all solutions or just one.
+        @return a <code>List<SolutionSet></code> representing the solutions found.
+    */
     public List<SolutionSet> findAllPossibleSolvableValuesInRange(int[] range,double goal,boolean findAllSolutions) {
         //Finds all possible solvable sets of numbers to make the goal
         // Will do so only returning values in non-descreasing order
@@ -120,8 +166,15 @@ public class Solver {
 
 
     }
-
-    public int findFirstInRange(double[] values,int[] valueRange,boolean works,boolean output) {
+    /**
+        Finds the first value in a given range that can/can't be created using a set of values.
+        @param values: an <code>double[]</code> representing the values to use.
+        @param goalRange: an <code>int[]</code> representing the range of goals to use.
+        @param works: a <code>boolean</code> representing whether to find the first value that can be created or the first value that cannot be created.
+        @param output: a <code>boolean</code> representing whether to print the value and the solution that creates it.
+        @return an <code>int</code> representing the first value in the range that can be created or cannot be created.
+    */
+    public int findFirstInRange(double[] values,int[] goalRange,boolean works,boolean output) {
         // If works is true: Returns the first value that can be created using the values
         // If works is false: Returns the first value that cannot be created if works
         TIntHashSet intSet = new TIntHashSet();
@@ -140,8 +193,8 @@ public class Solver {
             
             
         }
-        int i = valueRange[0];
-        int delta = valueRange[0]<valueRange[1]? 1: -1;
+        int i = goalRange[0];
+        int delta = goalRange[0]<goalRange[1]? 1: -1;
         while (true){
             boolean inside  = intSet.contains(i);
             i+=delta;
@@ -158,7 +211,12 @@ public class Solver {
             }
         }
     }
-
+    /**
+        Checks if two doubles are equal within a given tolerance.
+        @param a: a <code>double</code> representing the first value to compare.
+        @param b: a <code>double</code> representing the second value to compare.
+        @return a <code>boolean</code> representing whether the two values are equal within the given tolerance.
+    */
     private static boolean equal(double a, double b) {
         return Math.abs(a-b)<=TOLERANCE;
     }

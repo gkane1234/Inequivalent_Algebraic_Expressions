@@ -1,26 +1,27 @@
 package com.github.gkane1234;
 import java.util.*;
-
-public class Expression {
-    /*
+ /**
     This class is used to represent an expression in Reverse Polish Notation (RPN) as a list of values and operations and an order.
     
     To evaluate the expression with specific values use the method evaluate_with_values.
-    */
+*/
+public class Expression {
+   
     public byte[] valueOrder;
     public byte[] operations;
     public boolean[] order;
-    public Expression(byte[] valueOrder,byte[] operations,boolean[] order) {
-        /*
+    /**
         Constructor for the Expression class.
-        value_order: the order that the values are evaluated in the expression.
-        operations: the operations of the expression.
-        order: the order of the expression. 
+        @param value_order: the order that the values are evaluated in the expression.
+        @param operations: the operations of the expression.
+        @param order: the order of the expression. 
 
         For example: 
         The expression ((a+b)*c) is represented as value_order = [0,1,2] and operations = [0,2] and order = [true,true,false,true,false]
         To evaluate this expression with values a=3, b=4.7, c=5 the method evaluate_with_values would be used with values = [3,4.7,5].
-        */
+    */
+    public Expression(byte[] valueOrder,byte[] operations,boolean[] order) {
+        
 
         this.valueOrder=valueOrder;
         this.operations=operations;
@@ -28,13 +29,13 @@ public class Expression {
     }
 
 
-
+    /**
+    Changes the value order of the expression.
+    These values represent the order of the numbers in the expression.
+    @param valueOrder: the new value order of the expression.
+    */
     public Expression changeValueOrder(byte[] valueOrder) {
-        /*
-        Changes the value order of the expression.
-        These values represent the order of the numbers in the expression.
-        valueOrder: the new value order of the expression.
-        */
+        
         byte[] newValues = new byte[valueOrder.length];
         for (byte i=0;i<valueOrder.length;i++) {
             newValues[i]=valueOrder[this.valueOrder[i]];
@@ -42,13 +43,12 @@ public class Expression {
 
         return new Expression(newValues,this.operations,this.order);
     }
-
-    public double evaluateWithValues(double[] values,int rounding) {
-        /*
+    /**
         Evaluates the expression with specific values.
-        values: the values of the expression.
-        rounding: the number of decimal places to round the result to.
-        */
+        @param values: the values of the expression.
+        @param rounding: the number of decimal places to round the result to.
+    */
+    public double evaluateWithValues(double[] values,int rounding) {
         double[] newValues = new double[values.length];
         for (byte i=0;i<valueOrder.length;i++) {
             newValues[i]=values[this.valueOrder[i]];
@@ -67,14 +67,14 @@ public class Expression {
     
     }
 
-
+    /**
+    Evaluates the expression with specific values.
+    @param values: the values of the expression.
+    @param rounding: the number of decimal places to round the result to.
+    */
 
     private double evaluateRpn(double[] values,int rounding) {
-        /*
-        Evaluates the expression with specific values.
-        values: the values of the expression.
-        rounding: the number of decimal places to round the result to.
-        */
+        
         DoubleArrayStack stack = new DoubleArrayStack(this.order.length);
         byte values_pointer =0;
         byte operations_pointer = 0;
@@ -97,14 +97,15 @@ public class Expression {
             }
         }
         double nonRounded = stack.pop();
+        //return nonRounded;
         return Math.round(nonRounded * Math.pow(10, rounding)) / Math.pow(10,rounding);
     }
-
-    public static String convertToParenthetical(Expression expression) {
-        /*
+    /**
         Converts the expression to a parenthetical string.
-        expression: the expression to convert.
-        */
+        @param expression: the expression to convert.
+    */
+    public static String convertToParenthetical(Expression expression) {
+        
         Stack<String> stack = new Stack<>();
         byte values_pointer =0;
         byte operations_pointer = 0;
@@ -124,23 +125,24 @@ public class Expression {
         return stack.pop();
     }
 
-    public static Expression createExpressionFromString(String expression) {
-        /*
+    /**
         Creates an expression from a parenthetical string.
-        expression: the parenthetical string to convert.
-        */
+        @param expression: the parenthetical string to convert.
+    */ 
+    public static Expression createExpressionFromString(String expression) {
+        
         //TODO: implement this method
         throw new UnsupportedOperationException("Not implemented");
     }
-    //combined a helper function in order to make the code run more efficiently
-    public static Expression[] createCombinedExpressions(Expression expression1, Expression expression2) {
-        /*
+    /**
         Creates all possible expressions made by combining two expressions.
-        expression1: the first expression to combine.
-        expression2: the second expression to combine.
+        @param expression1: the first expression to combine.
+        @param expression2: the second expression to combine.
 
         Avoids returning expressions that are the same up to commutativity.
-        */
+    */
+    public static Expression[] createCombinedExpressions(Expression expression1, Expression expression2) {
+        
         int index=0;
         Expression[] toReturn = new Expression[Operation.getNumOperationOrderings()];
         for (byte opCode=0;opCode<Operation.getOperations().length;opCode++) {
@@ -154,15 +156,15 @@ public class Expression {
         return toReturn;
     }
 
-
+    /**
+     *Combines two expressions.
+     *@param expr1: the first expression to combine.
+     *@param expr2: the second expression to combine.
+     *@param opCode: the operation to combine the expressions.
+     */
 
     private static Expression combineExpressions(Expression expr1, Expression expr2, byte opCode) {
-        /*
-        Combines two expressions.
-        expr1: the first expression to combine.
-        expr2: the second expression to combine.
-        opCode: the operation to combine the expressions.
-        */
+        
         byte[] newValueOrder = combine(expr1.valueOrder,expr2.valueOrder);
         byte[] newOperations = combineWithExtraSpot(expr1.operations,expr2.operations);
         newOperations[newOperations.length-1]=opCode;
@@ -172,12 +174,13 @@ public class Expression {
         return new Expression(newValueOrder, newOperations, newOrder);
 
     }
-    public static byte[] combine(byte[] arr1, byte[] arr2) {
-        /*
+    /**
         Combines two byte arrays.
-        arr1: the first byte array to combine.
-        arr2: the second byte array to combine.
-        */
+        @param arr1: the first byte array to combine.
+        @param arr2: the second byte array to combine.
+    */
+    public static byte[] combine(byte[] arr1, byte[] arr2) {
+        
         byte[] newArr = new byte[arr1.length + arr2.length];
         
 
@@ -188,14 +191,15 @@ public class Expression {
     }
 
     // Overloaded method for combining byte arrays
-    public static byte[] combineWithExtraSpot(byte[] arr1, byte[] arr2) {
-        /*
+    /**
         Combines two byte arrays with an extra spot.
-        arr1: the first byte array to combine.
-        arr2: the second byte array to combine.
+        @param arr1: the first byte array to combine.
+        @param arr2: the second byte array to combine.
 
         Used in combining expressions.
-        */
+    */
+    public static byte[] combineWithExtraSpot(byte[] arr1, byte[] arr2) {
+        
         byte[] newArr = new byte[arr1.length + arr2.length+1];
         
         System.arraycopy(arr1, 0, newArr, 0, arr1.length);
@@ -203,14 +207,15 @@ public class Expression {
         
         return newArr;
     }
-    public static boolean[] combineWithExtraSpot(boolean[] arr1, boolean[] arr2) {
-        /*
+    /**
         Combines two boolean arrays with an extra spot.
-        arr1: the first boolean array to combine.
-        arr2: the second boolean array to combine.
+        @param arr1: the first boolean array to combine.
+        @param arr2: the second boolean array to combine.
 
         Used in combining expressions.
-        */
+    */
+    public static boolean[] combineWithExtraSpot(boolean[] arr1, boolean[] arr2) {
+        
         boolean[] newArr = new boolean[arr1.length + arr2.length+1];
         System.arraycopy(arr1, 0, newArr, 0, arr1.length);
         System.arraycopy(arr2, 0, newArr, arr1.length, arr2.length);

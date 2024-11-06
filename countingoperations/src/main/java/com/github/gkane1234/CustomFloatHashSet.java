@@ -3,6 +3,15 @@ package com.github.gkane1234;
 import gnu.trove.impl.HashFunctions;
 import gnu.trove.set.hash.TFloatHashSet;
 import gnu.trove.impl.hash.TFloatHash;
+
+
+// UNUSED
+
+/**
+    A custom float hash set that uses a custom hash function to avoid excessive hash collisions.
+
+    Uses code from gnu.trove.set.hash.TFloatHashSet and gnu.trove.impl.hash.TFloatHash.
+*/
 public class CustomFloatHashSet extends TFloatHashSet {
     private static final int DEFAULT_CAPACITY = 16;
     private static final float LOAD_FACTOR = 0.75f;

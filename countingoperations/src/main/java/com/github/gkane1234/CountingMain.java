@@ -21,8 +21,8 @@ public class CountingMain {
         //ExpressionList expressionList = expressionDynamic.getExpressionList();
         //{791,27,18632,1,19.315,-793.2,-8537.214}
         //System.out.println(CountingPossibilities.numberOfDistinctSetsOfNumbersWhereOrderDoesNotMatter(10,100));
-        int numValues = 6;
-        Solver s = new Solver(numValues);
+        int numValues = 7;
+        Solver s = new Solver(numValues,true);
         int[] range = {1,13};
         List<SolutionSet> questions = s.findSolvableValues(10,137,range,new int[]{1,10000});
         for (SolutionSet question : questions) {

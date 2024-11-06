@@ -5,12 +5,21 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
+/**
+    This class is used to write the solutions to a file.
+*/
 public class SolutionWriter {
     String filePath;
     List<SolutionSet> allSolutions;
     boolean fullOutput;
     String metadata;
     String fileName;
+    /**
+        Constructor for the SolutionWriter class.
+        @param filePath: a <code>String</code> representing the path to the file to write to.
+        @param allSolutions: a <code>List<SolutionSet></code> representing the solutions to write to the file.
+        @param fullOutput: a <code>boolean</code> representing whether to write the full output or a single number representing the expression, and a single number representing the number of solutions.
+    */
     public SolutionWriter(String filePath,List<SolutionSet> allSolutions,boolean fullOutput){
         this.filePath=filePath;
         this.allSolutions=allSolutions;
@@ -18,6 +27,9 @@ public class SolutionWriter {
         createMetadataAndName();
     }
 
+    /**
+        Creates the file and writes the solutions to it.
+    */
     public void createFile() {
 
         int solvable = 0;
@@ -44,10 +56,18 @@ public class SolutionWriter {
         }
     }
 
+    /**
+        Creates a verbose line for the file.
+        @param solutionSet: a <code>SolutionSet</code> representing the solution set to write to the file.
+        @return a <code>String</code> representing the solution set.
+    */
     private static String createVerboseLine(SolutionSet solutionSet) { 
         return solutionSet.toString();
 
     }
+    /**
+        Creates the metadata and name for the file.
+    */
     private void createMetadataAndName() {
         String numValues = String.valueOf(allSolutions.get(0).getValues().length);
         String minValue = String.valueOf(allSolutions.get(0).getValues()[0]);
@@ -62,6 +82,12 @@ public class SolutionWriter {
         
 
     }
+    /**
+        Creates a small line for the file.
+        @param solutionSet: a <code>SolutionSet</code> representing the solution set to write to the file.
+        @param i: an <code>int</code> representing the index of the solution set.
+        @return a <code>String</code> representing the solution set.
+    */
     private static String createSmallLine(SolutionSet solutionSet,int i) {
         return String.valueOf(i)+","+String.valueOf(solutionSet.getNumSolutions());
     }

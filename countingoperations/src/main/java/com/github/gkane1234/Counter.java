@@ -1,15 +1,13 @@
 package com.github.gkane1234;
 import java.math.BigInteger;
 import java.util.Arrays;
-
+/** 
+    This is a Java implementation of the counting algorithm found here: https://oeis.org/A140606
+    Used to count the number of inequivalent expressions that can be made with n values and the standard 4 operations.
+    There is apparently a mathematical proof that describes the algorithm, but I have not yet been able to find it, as the link on the OEIS page is dead.
+*/
 public class Counter {
-    /*
-     * This is a Java implementation of the counting algorithm found here: https://oeis.org/A140606
-     * Used to count the number of inequivalent expressions that can be made with n and the standard 4 operations.
-     * There is apparently a mathematical proof that describes the algorithm, but I have not yet been able to find it, as the link on the OEIS page is dead.
-     */
-
-    // Define class-level variables
+    
     private static BigInteger[] sc;
     private static BigInteger[] sa;
     private static BigInteger[] sc1;
@@ -17,9 +15,9 @@ public class Counter {
     private static BigInteger[] fact;
     private static BigInteger[] p2m1;
     private static int[] ind;
-    private static int n;  // Number up to which we compute
+    private static int n;  
 
-    // Main method to run the counter
+    
     public static BigInteger run(int num) {
         n = num;
         init(num);
@@ -32,7 +30,6 @@ public class Counter {
         return count(num);
     }
 
-    // Main counting function
     public static BigInteger count(int n) {
         sc[n] = sa[n] = sc1[n] = sa1[n] = BigInteger.ZERO;
 
@@ -48,7 +45,6 @@ public class Counter {
         return sum;
     }
 
-    // Initialize arrays and calculate factorial and powers of 2
     public static void init(int num) {
         n = num;
         sc = new BigInteger[n + 1];
@@ -74,7 +70,7 @@ public class Counter {
         }
     }
 
-    // Get combinations based on factorials
+
     public static BigInteger getComb(int n, int g) {
         BigInteger comb = fact[n];
         int c = 0;
@@ -96,7 +92,7 @@ public class Counter {
         return comb;
     }
 
-    // Accumulate results for sc, sa, sc1, sa1
+
     public static void accum(int n, int g) {
         BigInteger comb = getComb(n, g);
 
@@ -129,7 +125,6 @@ public class Counter {
         sa1[n] = sa1[n].add(tmp);
     }
 
-    // Recursive function to set indices and accumulate results
     public static void tryIndex(int n, int g, int cur_g, int left) {
         if (cur_g == 0) {
             ind[cur_g] = left;
@@ -150,7 +145,6 @@ public class Counter {
         }
     }
 
-    // Count groupings
     public static void countGroup(int n, int g) {
         tryIndex(n, g, g - 1, n);
     }

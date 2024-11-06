@@ -2,6 +2,10 @@ package com.github.gkane1234;
 import java.util.Random;
 import java.util.Arrays;
 import gnu.trove.set.hash.TFloatHashSet;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 /*
     A data structure that stores inequivalent expressions.
 
@@ -9,18 +13,19 @@ import gnu.trove.set.hash.TFloatHashSet;
     by using a number of tester lists of values, each list being called a truncator.
 
 */
-public class ExpressionSet {
+public class ExpressionSetThreaded {
     
     private Expression[] expressions;
     private int numExpressions;
     private int numValues;
     public int rounding;
-    private TFloatHashSet[] seen;
-    //private CustomFloatHashSet[] seen;
-    //private TCustomHashSet<Float>[] seen;
+    private Thread[] truncatorThreads;
+    private BlockingQueue<Expression>[] truncatorQueues;
+    private BlockingQueue<Boolean>[] resultQueues;
     private double[][] truncators;
     public int numTruncators;
     public Operation[] ops;
+    private AtomicBoolean isRunning;
 
     /**
         Constructor for an ExpressionSet.
@@ -28,8 +33,7 @@ public class ExpressionSet {
         @param rounding: an <code>int</code> representing the number of decimal places to round to.
         @param numTruncators: an <code>int</code> representing the number of truncators to use.
     */
-    public ExpressionSet(int numValues, int rounding, int numTruncators) {
-        
+    public ExpressionSetThreaded(int numValues, int rounding, int numTruncators) {
         this(new Expression[] {}, 0, numValues, rounding, numTruncators);
     }
     /**
@@ -40,7 +44,8 @@ public class ExpressionSet {
         @param rounding: an <code>int</code> representing the number of decimal places to round to.
         @param numTruncators: an <code>int</code> representing the number of truncators to use.
     */
-    public ExpressionSet(Expression[] expressions,int numExpressions,int numValues, int rounding, int numTruncators) {
+    @SuppressWarnings("unchecked")
+    public ExpressionSetThreaded(Expression[] expressions,int numExpressions,int numValues, int rounding, int numTruncators) {
         
         if (expressions.length==0) {
             this.expressions=new Expression[getMaximumSize(numValues)];
@@ -52,28 +57,68 @@ public class ExpressionSet {
         this.numValues = numValues;
         this.rounding = rounding;
 
-        this.seen = new TFloatHashSet[numTruncators];
-        //this.seen = new TCustomHashSet[numTruncators];
-        //FloatHashingStrategy strategy = new FloatHashingStrategy();
-
+        this.truncatorThreads = new Thread[numTruncators];
+        this.truncatorQueues = new BlockingQueue[numTruncators];
+        this.resultQueues = new BlockingQueue[numTruncators];
         this.truncators = new double[numTruncators][numValues];
         this.numTruncators = numTruncators;
+        this.isRunning = new AtomicBoolean(false);
         
         Random random = new Random();
 
         double maxTruncatorValue = 10;
         for (int i = 0; i < numTruncators; i++) {
-            TFloatHashSet set = new TFloatHashSet();
-            seen[i]=set;
-            //seen[i]=new TCustomHashSet<>(strategy);
+            truncatorQueues[i] = new LinkedBlockingQueue<>();
+            resultQueues[i] = new LinkedBlockingQueue<>();
             double[] truncator = new double[numValues];
             for (int j = 0; j < numValues; j++) {
                 truncator[j] = 2*random.nextDouble()*maxTruncatorValue-maxTruncatorValue; // have answers be well mixed in the range of all possible floats to aid in hashing
             }
             truncators[i]=truncator;
         }
-
     }
+
+    public void startAdding() {
+        System.out.println("Starting adding");
+        isRunning.set(true);
+        for (int i = 0; i < numTruncators; i++) {
+            final int truncatorIndex = i;
+            truncatorThreads[i] = new Thread(() -> {
+                TFloatHashSet seen = new TFloatHashSet();
+                while (isRunning.get() || !truncatorQueues[truncatorIndex].isEmpty()) {
+                    try {
+                        //System.out.println("Thread "+truncatorIndex+" waiting for expression");
+                        Expression expr = truncatorQueues[truncatorIndex].take();
+                        //System.out.println("Thread "+truncatorIndex+" got expression "+expr);
+                        double value = expr.evaluateWithValues(truncators[truncatorIndex], rounding);
+                        boolean result = false;
+                        if (!Double.isNaN(value)) {
+                            result = seen.add((float)value);
+                        }
+                        resultQueues[truncatorIndex].put(result);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            });
+            truncatorThreads[i].start();
+        }
+    }
+
+    public void doneAdding() {
+        isRunning.set(false);
+        for (Thread thread : truncatorThreads) {
+            try {
+               
+                thread.interrupt();
+                thread.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
     /**
         Returns the maximum number of expressions that can be in the set.
         @param numValues: an <code>int</code> representing the number of values in the expressions.
@@ -129,7 +174,7 @@ public class ExpressionSet {
         @param valueOrder: a <code>byte[]</code> representing the new value order.
         @return an <code>ExpressionSet</code> representing the set with the new value order.
     */
-    public ExpressionSet changeValueOrders(byte[] valueOrder) {
+    public ExpressionSetThreaded changeValueOrders(byte[] valueOrder) {
         return createEvaluatedExpressionSet(this, valueOrder, this.numTruncators);
     }
     /**
@@ -138,15 +183,31 @@ public class ExpressionSet {
         @return a <code>boolean</code> representing whether the expression was added to the set.
     */
     public boolean add(Expression expression) {
-        boolean toAdd = false;
-        for (int i = 0; i < this.numTruncators; i++) {
-            double value = expression.evaluateWithValues(this.truncators[i],this.rounding);
-            if (!Double.isNaN(value) && seen[i].add((float)value)) {
-                toAdd = true;  
+        // Submit expression to all truncator threads
+        for (int i = 0; i < numTruncators; i++) {
+            try {
+                truncatorQueues[i].put(expression);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
             }
         }
+
+        // Collect results from all threads
+        boolean toAdd = false;
+        for (int i = 0; i < numTruncators; i++) {
+            try {
+                if (resultQueues[i].take()) {
+                    toAdd = true;
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+
         if (toAdd) {
-            expressions[this.numExpressions++]=expression;
+            expressions[this.numExpressions++] = expression;
         }
         return toAdd;
     }
@@ -155,10 +216,8 @@ public class ExpressionSet {
         @param expression: an <code>Expression</code> to add to the set.
     */
     public void forceAdd(Expression expression) {
-        expressions[this.numExpressions++]=expression;
+        expressions[this.numExpressions++] = expression;
     }
-
-
 
     /**
         Creates a new ExpressionSet with a new value order.
@@ -167,14 +226,14 @@ public class ExpressionSet {
         @param numTruncators: the number of truncators to use.
         @return an <code>ExpressionSet</code> representing the new set.
     */
-    public static ExpressionSet createEvaluatedExpressionSet(ExpressionSet genericExpressionSet, byte[] value_order, int numTruncators) throws IllegalStateException {
+    public static ExpressionSetThreaded createEvaluatedExpressionSet(ExpressionSetThreaded genericExpressionSet, byte[] value_order, int numTruncators) throws IllegalStateException {
         
         Expression[] newExpressions = new Expression[genericExpressionSet.expressions.length];
         for (int i=0;i<genericExpressionSet.numExpressions;i++) {
             newExpressions[i]=genericExpressionSet.expressions[i].changeValueOrder(value_order);
             
         }
-        return new ExpressionSet(newExpressions, genericExpressionSet.numExpressions,genericExpressionSet.numValues, genericExpressionSet.rounding, numTruncators);
+        return new ExpressionSetThreaded(newExpressions, genericExpressionSet.numExpressions,genericExpressionSet.numValues, genericExpressionSet.rounding, numTruncators);
     }
 
 }
