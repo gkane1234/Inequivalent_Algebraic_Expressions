@@ -1,11 +1,13 @@
 package com.github.gkane1234;
 import java.util.*;
+import java.io.Serializable;
  /**
     This class is used to represent an expression in Reverse Polish Notation (RPN) as a list of values and operations and an order.
     
     To evaluate the expression with specific values use the method evaluate_with_values.
 */
-public class Expression {
+public class Expression implements Serializable{
+    private static final long serialVersionUID = 1L;
    
     public byte[] valueOrder;
     public byte[] operations;

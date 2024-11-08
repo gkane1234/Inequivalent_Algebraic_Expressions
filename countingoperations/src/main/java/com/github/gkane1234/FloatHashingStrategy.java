@@ -1,6 +1,9 @@
 package com.github.gkane1234;
 import gnu.trove.strategy.HashingStrategy;
 
+// UNUSED
+
+
 public class FloatHashingStrategy implements HashingStrategy<Float> {
     private static final double CENTER = 0.5;
     private static final double MAX_EXPECTED = Math.pow(2, 10); 

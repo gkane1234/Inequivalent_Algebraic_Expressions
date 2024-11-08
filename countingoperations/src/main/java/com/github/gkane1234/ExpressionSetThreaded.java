@@ -4,7 +4,6 @@ import java.util.Arrays;
 import gnu.trove.set.hash.TFloatHashSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 /*
     A data structure that stores inequivalent expressions.

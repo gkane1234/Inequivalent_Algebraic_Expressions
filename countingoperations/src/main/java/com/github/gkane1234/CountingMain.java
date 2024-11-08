@@ -1,6 +1,7 @@
 package com.github.gkane1234;
 
-import java.util.List;
+import java.util.Scanner;
+import java.io.FileNotFoundException;
 public class CountingMain {
     public static void main(String[] args) {
 
@@ -16,19 +17,23 @@ public class CountingMain {
         //(((((18/78)+84)-61)*91)-87)
 
         // 3.0, 4.0, 9.0, 14.0, 7.0, 16.0, to make 2027
-        //((((4/7)+(16*9))*14)+3) 1
+        //((((4/7)+(16*9))*14)+3) 1=
         //ExpressionDynamic expressionDynamic = new ExpressionDynamic(numValues, 6, 8, null);
         //ExpressionList expressionList = expressionDynamic.getExpressionList();
         //{791,27,18632,1,19.315,-793.2,-8537.214}
         //System.out.println(CountingPossibilities.numberOfDistinctSetsOfNumbersWhereOrderDoesNotMatter(10,100));
         int numValues = 7;
-        Solver s = new Solver(numValues,true);
+
+        Scanner scanner = new Scanner(System.in);
+        Solver s = new Solver(numValues,true,true);
+
+        /* 24
         int[] range = {1,13};
         List<SolutionSet> questions = s.findSolvableValues(10,137,range,new int[]{1,10000});
         for (SolutionSet question : questions) {
             System.out.println(question);
         }
-
+        */
 
         /*
         Solver s = new Solver(numValues); 
@@ -39,14 +44,21 @@ public class CountingMain {
         */
 
         
+        /*
+         * For example the inequivalent expressions using the 2 variables a and b would be  f(a)⊕f(b) or    {a+b,a-b,b-a,ab,a/b,b/a} – these expressions can be evaluated for imputed values, such as at (5,12), which would evaluate to 17, -7, 7, 60, 5/12, and 12/5 respectively. So for 4 numbers, a,b,c, and d the space to check should be:
+
+         * f(a)⊕f(b,c,d), f(b)⊕f(a,c,d), f(c)⊕f(a,b,d), f(d)⊕f(a,b,c)
+         * f(a,b)⊕f(c,d), f(a,c)⊕f(b,d), f(a,d)⊕f(b,c)
+         * 
+         * 
+         */
         
 
  
-        /* 
+        
         while (true) {
             System.out.print("Enter a new goal value (or type 'exit' to quit): ");
             String input = scanner.nextLine();
-
 
             if (input.equalsIgnoreCase("exit")) {
                 break;
@@ -54,23 +66,37 @@ public class CountingMain {
 
             try {
                 double goal = Double.parseDouble(input);
-                List<List<Solution>> questions = s.findSolvableValues(1, goal, new int[] {1, 10}, new int[] {1, 300});
+                
+                System.out.print("Enter " + numValues + " values separated by spaces: ");
+                String[] valueStrings = scanner.nextLine().trim().split("\\s+");
+                
+                if (valueStrings.length != numValues) {
+                    System.out.println("Please enter exactly " + numValues + " values.");
+                    continue;
+                }
 
-                for (List<Solution> question : questions) {
-                    if (!question.isEmpty()) {
-                        print(question.get(0).getValues());
-                        System.out.print(question.get(0).display() + " Number of Solutions: ");
-                        System.out.println(question.size());
-                    } else {
-                        System.out.println("No solutions found for goal: " + goal);
+                int[] values = new int[numValues];
+                for (int i = 0; i < numValues; i++) {
+                    values[i] = Integer.parseInt(valueStrings[i]);
+                }
+
+                SolutionSet solutions = s.findAllSolutions(values, goal);
+                
+                if (solutions.getNumSolutions() == 0) {
+                    System.out.println("No solutions found for these values and goal.");
+                } else {
+                    System.out.println("Found " + solutions.getNumSolutions() + " solutions:");
+                    for (Solution solution : solutions.getSolutions()) {
+                        System.out.println(solution.display());
                     }
                 }
+
             } catch (NumberFormatException e) {
-                System.out.println("Invalid input. Please enter a valid number for the goal.");
+                System.out.println("Invalid input. Please enter valid numbers.");
             }
         }
 
-        scanner.close(); // */ 
+        scanner.close();
     
 
 

@@ -30,7 +30,7 @@ public class Counter {
         return count(num);
     }
 
-    public static BigInteger count(int n) {
+    private static BigInteger count(int n) {
         sc[n] = sa[n] = sc1[n] = sa1[n] = BigInteger.ZERO;
 
         for (int g = 2; g <= n; g++) {
@@ -45,7 +45,7 @@ public class Counter {
         return sum;
     }
 
-    public static void init(int num) {
+    private static void init(int num) {
         n = num;
         sc = new BigInteger[n + 1];
         sa = new BigInteger[n + 1];
@@ -71,7 +71,7 @@ public class Counter {
     }
 
 
-    public static BigInteger getComb(int n, int g) {
+    private static BigInteger getComb(int n, int g) {
         BigInteger comb = fact[n];
         int c = 0;
 
@@ -93,7 +93,7 @@ public class Counter {
     }
 
 
-    public static void accum(int n, int g) {
+    private static void accum(int n, int g) {
         BigInteger comb = getComb(n, g);
 
         // sc[n]
@@ -125,7 +125,7 @@ public class Counter {
         sa1[n] = sa1[n].add(tmp);
     }
 
-    public static void tryIndex(int n, int g, int cur_g, int left) {
+    private static void tryIndex(int n, int g, int cur_g, int left) {
         if (cur_g == 0) {
             ind[cur_g] = left;
             accum(n, g);
@@ -145,7 +145,7 @@ public class Counter {
         }
     }
 
-    public static void countGroup(int n, int g) {
+    private static void countGroup(int n, int g) {
         tryIndex(n, g, g - 1, n);
     }
 

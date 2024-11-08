@@ -3,27 +3,50 @@ package com.github.gkane1234;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-
+import java.io.FileNotFoundException;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.set.hash.TIntHashSet;
-
+import java.util.Arrays;
 /**
     Solver class for finding solutions for a given goal using a set of values.
 */
 public class Solver {
+    private static final int NUM_THREADS = 20;
+    private static final int NUM_TRUNCATORS = 20;
+    private static final int ROUNDING =7;
     private static final double TOLERANCE = 1e-5;
     private static final int MAX_ATTEMPTS = 1000;
     private static final int MAX_SOLUTIONS = 200;
     ExpressionSet solverSet;
     private int numValues;
+    private boolean verbose;
     /**
         Constructor for the Solver class.
         @param numValues: an <code>int</code> representing the number of values to use.
         @param verbose: a <code>boolean</code> representing whether to print verbose output.
     */
-    Solver(int numValues,boolean verbose){
-        solverSet = new ExpressionDynamic(numValues,7,5,null,verbose).getExpressionSet();
-        System.err.println(solverSet.size());
+    Solver(int numValues,boolean verbose, boolean load){
+        this.verbose = verbose;
+        if (load) {
+            try {
+                if (verbose) {
+                    System.err.println("Loading expression set...");
+                }
+                solverSet = ExpressionSet.loadLarge(numValues, Counter.run(numValues).intValue(),NUM_THREADS);
+            } catch (FileNotFoundException e) {
+                if (verbose) {
+                    System.err.println("File not found, creating instead...");
+                }
+                solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose).getExpressionSet();
+                ExpressionSet.saveLarge(solverSet);
+            }
+            
+        } else {
+            solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose).getExpressionSet();
+        }
+        if (verbose) {
+            System.err.println("Loaded "+solverSet.getNumExpressions()+" expressions.");
+        }
         this.numValues=numValues;
     }
     /**
@@ -86,6 +109,7 @@ public class Solver {
         return findFirstSolution(doubleValues, goal);
 
     }
+
     /**
         Finds a random set of values that can be used to make a given goal.
         @param numSolutions: an <code>int</code> representing the number of solutions to find.
@@ -102,14 +126,22 @@ public class Solver {
         int attempts =0;
     
         while(solvables.size()<numSolutions&&attempts<MAX_ATTEMPTS) {
+            
             attempts++;
             int[] nextAttempt = r.ints(numValues, valueRange[0], valueRange[1]).toArray();
+            if (this.verbose) {
+                System.out.print("Attempting: "+attempts);
+                System.out.print(" ");
+                System.out.println(Arrays.toString(nextAttempt));
+            }
     
             SolutionSet solutions = findAllSolutions(nextAttempt, goal);
             
             if (solutionRange[0] <= solutions.getNumSolutions() && solutions.getNumSolutions() <= solutionRange[1]) {
                 solvables.add(solutions);
-                System.out.println(attempts);
+                if (this.verbose) {
+                    System.out.println(attempts);
+                }
                 attempts=0;
             }
         }

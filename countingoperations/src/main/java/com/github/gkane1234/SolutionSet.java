@@ -80,6 +80,14 @@ public class SolutionSet {
     public double getGoal() {
         return this.goal;
     }
+
+    public List<Solution> getSolutions() {
+        return this.solutionSet;
+    }
+
+    public Solution getSolution(int index) {
+        return this.solutionSet.get(index);
+    }
     /**
         Returns a string representation of the solution set.
         @return a <code>String</code> representing the solution set.
