@@ -54,11 +54,11 @@ public class Solver {
         @param goal: a <code>double</code> representing the goal to find solutions for.
         @return a <code>SolutionSet</code> representing the solutions found.
     */
-    public SolutionSet findAllSolutions(double[] values, double goal) {
-        SolutionSet solutions = new SolutionSet(values,goal);
+    public SolutionList findAllSolutions(double[] values, double goal) {
+        SolutionList solutions = new SolutionList(values,goal);
         for (int i=0;i<solverSet.getNumExpressions();i++) {
             if (Solver.equal(solverSet.get(i).evaluateWithValues(values,Solver.ROUNDING),goal)) {
-                    solutions.addSolution(new Solution(solverSet.get(i),values,goal));
+                    solutions.addSolution(new EvaluatedExpression(solverSet.get(i),values,goal));
             }
             if (solutions.getNumSolutions()>MAX_SOLUTIONS) {
                 i=solverSet.getNumExpressions();
@@ -72,7 +72,7 @@ public class Solver {
         @param goal: a <code>double</code> representing the goal to find solutions for.
         @return a <code>SolutionSet</code> representing the solutions found.
     */
-    public SolutionSet findAllSolutions(int[] values, double goal) {
+    public SolutionList findAllSolutions(int[] values, double goal) {
         double[] doubleValues = new double[values.length];
         for (int i=0;i<values.length;i++) {
             doubleValues[i]=values[i];
@@ -86,10 +86,10 @@ public class Solver {
         @param goal: a <code>double</code> representing the goal to find solutions for.
         @return a <code>Solution</code> representing the first solution found.
     */
-    public Solution findFirstSolution(double[] values, double goal) {
+    public EvaluatedExpression findFirstSolution(double[] values, double goal) {
         for (int i=0;i<solverSet.getNumExpressions();i++) {
             if (Solver.equal(solverSet.get(i).evaluateWithValues(values,Solver.ROUNDING),goal)) {
-                return new Solution(solverSet.get(i),values,goal);
+                return new EvaluatedExpression(solverSet.get(i),values,goal);
             }
         }
         return null;
@@ -100,7 +100,7 @@ public class Solver {
         @param goal: a <code>double</code> representing the goal to find solutions for.
         @return a <code>Solution</code> representing the first solution found.
     */
-    public Solution findFirstSolution(int[] values, double goal) {
+    public EvaluatedExpression findFirstSolution(int[] values, double goal) {
         double[] doubleValues = new double[values.length];
         for (int i=0;i<values.length;i++) {
             doubleValues[i]=values[i];
@@ -115,12 +115,12 @@ public class Solver {
         @param goal: a <code>double</code> representing the goal to find solutions for.
         @param valueRange: an <code>int[]</code> representing the range of values to use.
         @param solutionRange: an <code>int[]</code> representing the range of solutions to find.
-        @return a <code>List<SolutionSet></code> representing the solutions found.
+        @return a <code>List<SolutionList></code> representing the solutions found.
     */
-    public List<SolutionSet> findSolvableValues(int numSolutions,double goal, int[] valueRange, int[] solutionRange) {
+    public List<SolutionList> findSolvableValues(int numSolutions,double goal, int[] valueRange, int[] solutionRange) {
         Random r = new Random();
 
-        List<SolutionSet> solvables = new ArrayList<>();
+        List<SolutionList> solvables = new ArrayList<>();
 
         int attempts =0;
     
@@ -134,7 +134,7 @@ public class Solver {
                 System.out.println(Arrays.toString(nextAttempt));
             }
     
-            SolutionSet solutions = findAllSolutions(nextAttempt, goal);
+            SolutionList solutions = findAllSolutions(nextAttempt, goal);
             
             if (solutionRange[0] <= solutions.getNumSolutions() && solutions.getNumSolutions() <= solutionRange[1]) {
                 solvables.add(solutions);
@@ -152,7 +152,7 @@ public class Solver {
         @param numSolutions: an <code>int</code> representing the number of solutions to find.
         @return a <code>List<SolutionSet></code> representing the solutions found.
     */
-    public List<SolutionSet> findSolvableValues(int numSolutions) {
+    public List<SolutionList> findSolvableValues(int numSolutions) {
         int[] defualtRange = new int[]{1,15};
         int[] defaultSolutionRange = new int[]{1,100*this.numValues};
         double defaultGoal = 24d;
@@ -165,12 +165,12 @@ public class Solver {
         @param findAllSolutions: a <code>boolean</code> representing whether to find all solutions or just one.
         @return a <code>List<SolutionSet></code> representing the solutions found.
     */
-    public List<SolutionSet> findAllPossibleSolvableValuesInRange(int[] range,double goal,boolean findAllSolutions) {
+    public List<SolutionList> findAllPossibleSolvableValuesInRange(int[] range,double goal,boolean findAllSolutions) {
         //Finds all possible solvable sets of numbers to make the goal
         // Will do so only returning values in non-descreasing order
         RangeIterator allValuesInRangeIterator = new RangeIterator(range, this.numValues);
-        List<SolutionSet> solvables = new ArrayList<>();
-        SolutionSet nextSolutionSet;
+        List<SolutionList> solvables = new ArrayList<>();
+        SolutionList nextSolutionList;
         int tracker = 0;
         while (allValuesInRangeIterator.hasNext()) {
             int[] values = allValuesInRangeIterator.next();
@@ -178,15 +178,15 @@ public class Solver {
                 CountingMain.print(values);
             }
             if (findAllSolutions) {
-                nextSolutionSet = findAllSolutions(values, goal);
+                nextSolutionList = findAllSolutions(values, goal);
             } else {
-                Solution firstSolution = findFirstSolution(values, goal);
-                nextSolutionSet = new SolutionSet(values,goal);
+                EvaluatedExpression firstSolution = findFirstSolution(values, goal);
+                nextSolutionList = new SolutionList(values,goal);
                 if (firstSolution!=null) {
-                    nextSolutionSet.addSolution(firstSolution);
+                    nextSolutionList.addEvaluatedExpression(firstSolution);
                 }
             }
-            solvables.add(nextSolutionSet);
+            solvables.add(nextSolutionList);
         }
 
         return solvables;
@@ -209,16 +209,18 @@ public class Solver {
         // If works is true: Returns the first value that can be created using the values
         // If works is false: Returns the first value that cannot be created using the values
         TIntHashSet intSet = new TIntHashSet();
-        TIntObjectHashMap <Solution> outputs = new TIntObjectHashMap<>();
+        TIntObjectHashMap <EvaluatedExpression> outputs = new TIntObjectHashMap<>();
 
-        for (int i=0;i<solverSet.getNumExpressions();i++) {
-            double answer = solverSet.get(i).evaluateWithValues(values,Solver.ROUNDING);
+
+        EvaluatedExpressionList evaluatedExpressionList = ExpressionSet.evaluate(solverSet, values, Solver.ROUNDING);
+        for (EvaluatedExpression evaluatedExpression : evaluatedExpressionList.getEvaluatedExpressionList()) {
+            double answer = evaluatedExpression.getValue();
             if (Solver.equal(answer, Math.round(answer))) {
                 int wholeNumberAnswer = (int)Math.round(answer);
                 
                 //System.err.println(wholeNumberAnswer);
                 if (intSet.add(wholeNumberAnswer)&&output) {
-                    outputs.put(wholeNumberAnswer, new Solution(solverSet.get(i), values, wholeNumberAnswer));
+                    outputs.put(wholeNumberAnswer, evaluatedExpression);
                 }
             }
             

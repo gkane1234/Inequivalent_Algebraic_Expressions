@@ -10,7 +10,7 @@ import java.util.List;
 */
 public class SolutionWriter {
     String filePath;
-    List<SolutionSet> allSolutions;
+    List<SolutionList> allSolutions;
     boolean fullOutput;
     String metadata;
     String fileName;
@@ -20,7 +20,7 @@ public class SolutionWriter {
         @param allSolutions: a <code>List<SolutionSet></code> representing the solutions to write to the file.
         @param fullOutput: a <code>boolean</code> representing whether to write the full output or a single number representing the expression, and a single number representing the number of solutions.
     */
-    public SolutionWriter(String filePath,List<SolutionSet> allSolutions,boolean fullOutput){
+    public SolutionWriter(String filePath,List<SolutionList> allSolutions,boolean fullOutput){
         this.filePath=filePath;
         this.allSolutions=allSolutions;
         this.fullOutput=fullOutput;
@@ -39,14 +39,14 @@ public class SolutionWriter {
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(this.filePath))) {
             writer.println(this.metadata);
-            for (SolutionSet solutionSet : this.allSolutions) {
+            for (SolutionList solutionList : this.allSolutions) {
                 if (this.fullOutput) {
-                    writer.println(SolutionWriter.createVerboseLine(solutionSet));
+                    writer.println(SolutionWriter.createVerboseLine(solutionList));
                 }
                 else {
-                    writer.println(SolutionWriter.createSmallLine(solutionSet, i++));
+                    writer.println(SolutionWriter.createSmallLine(solutionList, i++));
                 }
-                if (solutionSet.getNumSolutions() > 0) {
+                if (solutionList.getNumSolutions() > 0) {
                     solvable++;
                 }
             }
@@ -61,8 +61,8 @@ public class SolutionWriter {
         @param solutionSet: a <code>SolutionSet</code> representing the solution set to write to the file.
         @return a <code>String</code> representing the solution set.
     */
-    private static String createVerboseLine(SolutionSet solutionSet) { 
-        return solutionSet.toString();
+    private static String createVerboseLine(SolutionList solutionList) { 
+        return solutionList.toString();
 
     }
     /**
@@ -88,8 +88,8 @@ public class SolutionWriter {
         @param i: an <code>int</code> representing the index of the solution set.
         @return a <code>String</code> representing the solution set.
     */
-    private static String createSmallLine(SolutionSet solutionSet,int i) {
-        return String.valueOf(i)+","+String.valueOf(solutionSet.getNumSolutions());
+    private static String createSmallLine(SolutionList solutionList,int i) {
+        return String.valueOf(i)+","+String.valueOf(solutionList.getNumSolutions());
     }
 
 

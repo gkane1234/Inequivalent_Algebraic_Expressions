@@ -12,6 +12,13 @@ import java.io.FileOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ExecutionException;
+
 /*
     A data structure that stores inequivalent expressions.
 
@@ -154,7 +161,7 @@ public class ExpressionSet implements Serializable{
         @return an <code>ExpressionSet</code> representing the set with the new value order.
     */
     public ExpressionSet changeValueOrders(byte[] valueOrder) {
-        return createEvaluatedExpressionSet(this, valueOrder, this.numTruncators);
+        return changeValueOrder(this, valueOrder, this.numTruncators);
     }
     /**
         Adds an expression to the set if it is not equivalent to any of the expressions already in the set.
@@ -281,19 +288,63 @@ public class ExpressionSet implements Serializable{
 
     /**
         Creates a new ExpressionSet with a new value order.
-        @param genericExpressionSet: an <code>ExpressionSet</code> to create a new set from.
+        @param expressionSet: an <code>ExpressionSet</code> to create a new set from.
         @param value_order: a <code>byte[]</code> representing the new value order.
         @param numTruncators: the number of truncators to use.
         @return an <code>ExpressionSet</code> representing the new set.
     */
-    public static ExpressionSet createEvaluatedExpressionSet(ExpressionSet genericExpressionSet, byte[] value_order, int numTruncators) throws IllegalStateException {
+    public static ExpressionSet changeValueOrder(ExpressionSet expressionSet, byte[] value_order, int numTruncators) throws IllegalStateException {
         
-        Expression[] newExpressions = new Expression[genericExpressionSet.expressions.length];
-        for (int i=0;i<genericExpressionSet.numExpressions;i++) {
-            newExpressions[i]=genericExpressionSet.expressions[i].changeValueOrder(value_order);
+        Expression[] newExpressions = new Expression[expressionSet.expressions.length];
+        for (int i=0;i<expressionSet.numExpressions;i++) {
+            newExpressions[i]=expressionSet.expressions[i].changeValueOrder(value_order);
             
         }
-        return new ExpressionSet(newExpressions, genericExpressionSet.numExpressions,genericExpressionSet.numValues, genericExpressionSet.rounding, numTruncators);
+        return new ExpressionSet(newExpressions, expressionSet.numExpressions,expressionSet.numValues, expressionSet.rounding, numTruncators);
+    }
+    public static EvaluatedExpressionList evaluate(ExpressionSet expressionSet, double[] values, int rounding) {
+        final int numThreads = 10;
+        EvaluatedExpression[] evaluatedExpressions = new EvaluatedExpression[expressionSet.expressions.length];
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        List<Future<Void>> futures = new ArrayList<>();
+
+        int chunkSize = (expressionSet.numExpressions + numThreads - 1) / numThreads;
+        for (int t = 0; t < numThreads; t++) {
+            final int start = t * chunkSize;
+            final int end = Math.min(start + chunkSize, expressionSet.numExpressions);
+            
+            futures.add(executor.submit(() -> {
+                for (int i = start; i < end; i++) {
+                    double value = expressionSet.expressions[i].evaluateWithValues(values, rounding);
+                    evaluatedExpressions[i] = new EvaluatedExpression(expressionSet.expressions[i], values, value);
+                }
+                return null;
+            }));
+        }
+
+        for (Future<Void> future : futures) {
+            try {
+                future.get();
+            } catch (InterruptedException | ExecutionException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Error evaluating expressions", e);
+            }
+        }
+
+        executor.shutdown();
+        return new EvaluatedExpressionList(evaluatedExpressions);
     }
 
+    public static SolutionList evaluate(ExpressionSet expressionSet, double[] values, double goal, int rounding) {
+        EvaluatedExpressionList evaluatedExpressionList = evaluate(expressionSet, values, rounding);
+        SolutionList solutionList = new SolutionList(values,goal);
+        for (EvaluatedExpression evaluatedExpression : evaluatedExpressionList.getEvaluatedExpressionList()) {
+            try {
+                solutionList.addEvaluatedExpression(evaluatedExpression);
+            } catch (IllegalArgumentException e) {
+                //do nothing
+            }
+        }
+        return solutionList;
+    }
 }

@@ -30,6 +30,12 @@ public class Expression implements Serializable{
         this.order=order;
     }
 
+    public Expression(Expression expression) {
+        this.valueOrder=expression.valueOrder;
+        this.operations=expression.operations;
+        this.order=expression.order;
+    }
+
 
     /**
     Changes the value order of the expression.

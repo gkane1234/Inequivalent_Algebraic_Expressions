@@ -5,19 +5,18 @@ package com.github.gkane1234;
 
     This does not verify that the solution is correct, it is only a way to store a solution.
 */
-public class Solution{
+public class EvaluatedExpression extends Expression{
     private static final int DECIMAL_PLACES = 3;
     private double[] values;
     private double goal;
-    private Expression expression;
     /**
         Constructor for the Solution class.
         @param expression: an <code>Expression</code> representing the expression used to get the solution.
         @param values: a <code>double[]</code> representing the values used in the expression.
         @param goal: a <code>double</code> representing the goal of the solution.
     */
-    public Solution(Expression expression, double[] values,double goal) {
-        this.expression=expression;
+    public EvaluatedExpression(Expression expression, double[] values,double goal) {
+        super(expression);
         this.values=values;
         this.goal = goal;
     }
@@ -26,19 +25,19 @@ public class Solution{
         @return a <code>String</code> representing the solution.
     */
     public String display() {
-        ArrayStack<String> stack = new ArrayStack<>(expression.order.length);
+        ArrayStack<String> stack = new ArrayStack<>(this.order.length);
         byte values_pointer =0;
         byte operations_pointer = 0;
-        for (boolean isNumber : this.expression.order) {
+        for (boolean isNumber : this.order) {
             if (isNumber) {
-                double next = this.values[this.expression.valueOrder[values_pointer++]];
+                double next = this.values[this.valueOrder[values_pointer++]];
                 if (next == Math.round(next)) {
                     stack.push(String.valueOf(Math.round(next)));
                 } else {
                     stack.push(String.format("%." + DECIMAL_PLACES + "f", next));;
                 }
             } else {
-                byte opCode = expression.operations[operations_pointer++];
+                byte opCode = this.operations[operations_pointer++];
                 String b = stack.pop();
                 String a = stack.pop();
                 String combinedExpression = "("+a+String.valueOf(Operation.getOperations()[opCode])+b+")";
@@ -55,10 +54,10 @@ public class Solution{
         return this.values;
     }
     /**
-        Returns the goal of the solution.
-        @return a <code>double</code> representing the goal of the solution.
+        Returns the value of the solution.
+        @return a <code>double</code> representing the value of the solution.
     */
-    public double getGoal() {
+    public double getValue() {
         return this.goal;
     }
     /**

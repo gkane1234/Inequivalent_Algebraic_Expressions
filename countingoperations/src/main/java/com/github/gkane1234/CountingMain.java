@@ -1,7 +1,6 @@
 package com.github.gkane1234;
 
 import java.util.Scanner;
-import java.io.FileNotFoundException;
 public class CountingMain {
     public static void main(String[] args) {
 
