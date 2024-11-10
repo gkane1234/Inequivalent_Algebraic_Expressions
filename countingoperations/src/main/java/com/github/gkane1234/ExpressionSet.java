@@ -1,21 +1,14 @@
 package com.github.gkane1234;
 import java.util.Random;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import gnu.trove.set.hash.TFloatHashSet;
 import java.io.Serializable;
 import java.io.ObjectOutputStream;
+import java.io.BufferedOutputStream;
 import java.io.ObjectInputStream;
+import java.io.BufferedInputStream;
 import java.io.FileOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -190,23 +183,19 @@ public class ExpressionSet implements Serializable{
         expressions[this.numExpressions++]=expression;
     }
 
-
-    public static void save(ExpressionSet expressionSet) {
-        expressionSet.clearSeen();
-        String filename = FILE_PATH+"expressionSet"+expressionSet.numValues+"_"+expressionSet.numExpressions+".ser";
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filename))) {
-
-            oos.writeObject(expressionSet);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-    public static void saveLarge(ExpressionSet expressionSet) {
+    /**
+        Saves an expression set to a file.
+        @param expressionSet: an <code>ExpressionSet</code> to save.
+        @param verbose: a <code>boolean</code> representing whether to print progress.
+    */
+    public static void save(ExpressionSet expressionSet, boolean verbose) {
+        final int BUFFER_SIZE = 1024*1024;
         expressionSet.clearSeen();
         String filename = FILE_PATH + "expressionSetLarge" + expressionSet.numValues + "_" + expressionSet.numExpressions + ".ser";
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filename))) {
+        try (BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(filename),BUFFER_SIZE);
+             ObjectOutputStream oos = new ObjectOutputStream(bos)) {
             for (int i = 0; i < expressionSet.numExpressions; i++) {
-                if (i%1000000==0) {
+                if (verbose&&i%1000000==0) {
                     System.out.println("Saving expression "+i);
                 }
                 oos.writeObject(expressionSet.expressions[i]);
@@ -215,92 +204,76 @@ public class ExpressionSet implements Serializable{
             e.printStackTrace();
         }
     }
-    public static ExpressionSet load(String filename) throws FileNotFoundException {
-        System.out.println("Loading from "+filename);
-        ExpressionSet expressionSet = null;
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filename))) {
-            expressionSet = (ExpressionSet) ois.readObject();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new FileNotFoundException("File not found: "+filename);
-        }
-        return expressionSet;   
-    }
-
+    /**
+        Loads the expression set from a file which contains all algebraically inequivalent expressions with a given number of values.
+        @param numValues: an <code>int</code> representing the number of values in the expressions.
+        @return an <code>ExpressionSet</code> representing the loaded set.
+    */
     public static ExpressionSet load(int numValues) throws FileNotFoundException {
         int numExpressions = getMaximumSize(numValues);
         String filename = FILE_PATH+"expressionSet"+numValues+"_"+numExpressions+".ser";
-        return load(filename);
+        return load(filename, numValues, numExpressions, true);
     }
+    /**
+        Loads the expression set from a file which contains numExpressions inequivalent expressions with a given number of values.
+        @param numValues: an <code>int</code> representing the number of values in the expressions.
+        @param numExpressions: an <code>int</code> representing the number of expressions in the set.
+        @return an <code>ExpressionSet</code> representing the loaded set.
+    */
     public static ExpressionSet load(int numValues, int numExpressions) throws FileNotFoundException {
         String filename = FILE_PATH+"expressionSet"+numValues+"_"+numExpressions+".ser";
-        return load(filename);
+        return load(filename, numValues, numExpressions, true);
 
     }
-
-    public static ExpressionSet loadLarge(int numValues, int numExpressions, int numThreads) throws FileNotFoundException {
+    /**
+        Loads the expression set from a file which contains numExpressions inequivalent expressions with a given number of values.
+        @param numValues: an <code>int</code> representing the number of values in the expressions.
+        @param numExpressions: an <code>int</code> representing the number of expressions in the set.
+        @param verbose: a <code>boolean</code> representing whether to print progress.
+        @return an <code>ExpressionSet</code> representing the loaded set.
+    */
+    public static ExpressionSet load(int numValues, int numExpressions, boolean verbose) throws FileNotFoundException {
         String filename = FILE_PATH+"expressionSetLarge"+numValues+"_"+numExpressions+".ser";
-        return loadLarge(filename, numValues, numExpressions, numThreads);
+        return load(filename, numValues, numExpressions, verbose);
     }
-
-    public static ExpressionSet loadLarge(String filename, int numValues,int numExpressions, int numThreads) throws FileNotFoundException {
-        
+    /**
+        Loads the expression set from a file which contains numExpressions inequivalent expressions with a given number of values.
+        @param filename: a <code>String</code> representing the path to the file containing the expressions.
+        @param numValues: an <code>int</code> representing the number of values in the expressions.
+        @param numExpressions: an <code>int</code> representing the number of expressions in the set.
+        @param verbose: a <code>boolean</code> representing whether to print progress.
+        @return an <code>ExpressionSet</code> representing the loaded set.
+    */
+    public static ExpressionSet load(String filename, int numValues,int numExpressions, boolean verbose) throws FileNotFoundException {
+        final int BUFFER_SIZE = 1024*1024;
         // Use a thread-safe list to store expressions
-        ConcurrentLinkedQueue<Expression> expressionsQueue = new ConcurrentLinkedQueue<>();
+        long startTime = System.currentTimeMillis();
+
+        int decile = numExpressions/10;
+        Expression[] expressions = new Expression[numExpressions];
         
-        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-        
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filename))) {
-            List<Future<Void>> futures = new ArrayList<>();
+        try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(filename),BUFFER_SIZE);
+             ObjectInputStream ois = new ObjectInputStream(bis)) {
             
-            // Read the total number of expressions first
+            // Read expressions sequentially
             for (int i = 0; i < numExpressions; i++) {
-                futures.add(executor.submit(() -> {
-                    try {
-                        Expression expression;
-                        synchronized (ois) {
-                            expression = (Expression) ois.readObject();
-                        }
-                        
-                        expressionsQueue.add(expression);
-                    } catch (IOException | ClassNotFoundException e) {
-                        e.printStackTrace();
-                        
-                    }
-                    return null; // Return type must match Future's type
-                }));
-            }
-            
-            // Wait for all tasks to complete
-            for (Future<Void> future : futures) {
                 try {
-                    future.get(); // This will block until the task is complete
-                } catch (ExecutionException e) {
-                    e.printStackTrace(); // Handle exceptions from the task
-                } catch (InterruptedException e) {
+                    Expression expression = (Expression) ois.readObject();
+                    expressions[i]=expression;
+                    
+                    if (verbose && i % decile == 0) {
+                        System.out.println("%"+String.format("%.0f",100.0*i/numExpressions)+" Loaded expression " + i + " of "+numExpressions);
+                    }
+                } catch (ClassNotFoundException e) {
                     e.printStackTrace();
                 }
             }
+            
         } catch (IOException e) {
             throw new FileNotFoundException("File not found: " + filename);
-        } finally {
-            executor.shutdown(); // Shutdown the executor
-            try {
-                executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         }
-
-        // Transfer expressions from the queue to the expressionSet array
-        int index = 0;
-        Expression[] expressions = new Expression[numExpressions];
-        for (Expression expr : expressionsQueue) {
-            expressions[index++] = expr;
-        }
-
+        long endTime = System.currentTimeMillis();
+        System.out.println("Loaded "+numExpressions+" expressions in "+((endTime-startTime)/1000.0)+" seconds");
         return new ExpressionSet(expressions, numExpressions, numValues, 0, 0);
     }
 

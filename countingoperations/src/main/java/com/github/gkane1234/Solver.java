@@ -11,9 +11,8 @@ import java.util.Arrays;
     Solver class for finding solutions for a given goal using a set of values.
 */
 public class Solver {
-    private static final int NUM_THREADS = 20;
     private static final int NUM_TRUNCATORS = 20;
-    private static final int ROUNDING =7;
+    private static final int ROUNDING =9;
     private static final double TOLERANCE = 1e-5;
     private static final int MAX_ATTEMPTS = 1000;
     private static final int MAX_SOLUTIONS = 200;
@@ -32,13 +31,13 @@ public class Solver {
                 if (verbose) {
                     System.err.println("Loading expression set...");
                 }
-                solverSet = ExpressionSet.loadLarge(numValues, Counter.run(numValues).intValue(),NUM_THREADS);
+                solverSet = ExpressionSet.load(numValues, Counter.run(numValues).intValue(),verbose);
             } catch (FileNotFoundException e) {
                 if (verbose) {
                     System.err.println("File not found, creating instead...");
                 }
                 solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose).getExpressionSet();
-                ExpressionSet.saveLarge(solverSet);
+                ExpressionSet.save(solverSet,verbose);
             }
             
         } else {
@@ -58,7 +57,7 @@ public class Solver {
     public SolutionSet findAllSolutions(double[] values, double goal) {
         SolutionSet solutions = new SolutionSet(values,goal);
         for (int i=0;i<solverSet.getNumExpressions();i++) {
-            if (Solver.equal(solverSet.get(i).evaluateWithValues(values,solverSet.rounding),goal)) {
+            if (Solver.equal(solverSet.get(i).evaluateWithValues(values,Solver.ROUNDING),goal)) {
                     solutions.addSolution(new Solution(solverSet.get(i),values,goal));
             }
             if (solutions.getNumSolutions()>MAX_SOLUTIONS) {
@@ -89,7 +88,7 @@ public class Solver {
     */
     public Solution findFirstSolution(double[] values, double goal) {
         for (int i=0;i<solverSet.getNumExpressions();i++) {
-            if (Solver.equal(solverSet.get(i).evaluateWithValues(values,solverSet.rounding),goal)) {
+            if (Solver.equal(solverSet.get(i).evaluateWithValues(values,Solver.ROUNDING),goal)) {
                 return new Solution(solverSet.get(i),values,goal);
             }
         }
@@ -208,12 +207,12 @@ public class Solver {
     */
     public int findFirstInRange(double[] values,int[] goalRange,boolean works,boolean output) {
         // If works is true: Returns the first value that can be created using the values
-        // If works is false: Returns the first value that cannot be created if works
+        // If works is false: Returns the first value that cannot be created using the values
         TIntHashSet intSet = new TIntHashSet();
         TIntObjectHashMap <Solution> outputs = new TIntObjectHashMap<>();
 
         for (int i=0;i<solverSet.getNumExpressions();i++) {
-            double answer = solverSet.get(i).evaluateWithValues(values,solverSet.rounding);
+            double answer = solverSet.get(i).evaluateWithValues(values,Solver.ROUNDING);
             if (Solver.equal(answer, Math.round(answer))) {
                 int wholeNumberAnswer = (int)Math.round(answer);
                 

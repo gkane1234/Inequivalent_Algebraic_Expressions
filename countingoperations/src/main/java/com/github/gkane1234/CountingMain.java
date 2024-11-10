@@ -22,10 +22,17 @@ public class CountingMain {
         //ExpressionList expressionList = expressionDynamic.getExpressionList();
         //{791,27,18632,1,19.315,-793.2,-8537.214}
         //System.out.println(CountingPossibilities.numberOfDistinctSetsOfNumbersWhereOrderDoesNotMatter(10,100));
-        int numValues = 7;
+
+
 
         Scanner scanner = new Scanner(System.in);
+
+        int numValues = 7;
         Solver s = new Solver(numValues,true,true);
+
+        int[] range = {1,100000};
+
+        //s.findFirstInRange(values, range, false, true);
 
         /* 24
         int[] range = {1,13};
@@ -65,7 +72,7 @@ public class CountingMain {
             }
 
             try {
-                double goal = Double.parseDouble(input);
+                //double goal = Double.parseDouble(input);
                 
                 System.out.print("Enter " + numValues + " values separated by spaces: ");
                 String[] valueStrings = scanner.nextLine().trim().split("\\s+");
@@ -75,21 +82,22 @@ public class CountingMain {
                     continue;
                 }
 
-                int[] values = new int[numValues];
+                double[] values = new double[numValues];
                 for (int i = 0; i < numValues; i++) {
-                    values[i] = Integer.parseInt(valueStrings[i]);
+                    values[i] = Double.parseDouble(valueStrings[i]);
                 }
 
-                SolutionSet solutions = s.findAllSolutions(values, goal);
-                
+                s.findFirstInRange(values, range, true, true);
+                /*
                 if (solutions.getNumSolutions() == 0) {
                     System.out.println("No solutions found for these values and goal.");
                 } else {
                     System.out.println("Found " + solutions.getNumSolutions() + " solutions:");
                     for (Solution solution : solutions.getSolutions()) {
                         System.out.println(solution.display());
+                        }
                     }
-                }
+                */
 
             } catch (NumberFormatException e) {
                 System.out.println("Invalid input. Please enter valid numbers.");
