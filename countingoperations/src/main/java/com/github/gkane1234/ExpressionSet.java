@@ -18,6 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /*
     A data structure that stores inequivalent expressions.
@@ -335,16 +336,47 @@ public class ExpressionSet implements Serializable{
         return new EvaluatedExpressionList(evaluatedExpressions);
     }
 
-    public static SolutionList evaluate(ExpressionSet expressionSet, double[] values, double goal, int rounding) {
-        EvaluatedExpressionList evaluatedExpressionList = evaluate(expressionSet, values, rounding);
-        SolutionList solutionList = new SolutionList(values,goal);
-        for (EvaluatedExpression evaluatedExpression : evaluatedExpressionList.getEvaluatedExpressionList()) {
+    public static SolutionList findSolutions(ExpressionSet expressionSet, double[] values, double goal, int rounding) {
+        final int numThreads = 10;
+        final int maxSolutions = 200; // Maximum number of solutions to find
+        List<EvaluatedExpression> evaluatedExpressions = new ArrayList<>();
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        List<Future<Void>> futures = new ArrayList<>();
+        
+        Object lock = new Object(); // For thread-safe list access
+        AtomicInteger solutionsFound = new AtomicInteger(0);
+
+        int chunkSize = (expressionSet.numExpressions + numThreads - 1) / numThreads;
+        for (int t = 0; t < numThreads; t++) {
+            final int start = t * chunkSize;
+            final int end = Math.min(start + chunkSize, expressionSet.numExpressions);
+            
+            futures.add(executor.submit(() -> {
+                for (int i = start; i < end && solutionsFound.get() < maxSolutions; i++) {
+                    double value = expressionSet.expressions[i].evaluateWithValues(values, rounding);
+                    if (Solver.equal(value, goal)) { // Check if value equals goal
+                        synchronized(lock) {
+                            if (solutionsFound.get() < maxSolutions) {
+                                evaluatedExpressions.add(new EvaluatedExpression(expressionSet.expressions[i], values, value));
+                                solutionsFound.incrementAndGet();
+                            }
+                        }
+                    }
+                }
+                return null;
+            }));
+        }
+
+        for (Future<Void> future : futures) {
             try {
-                solutionList.addEvaluatedExpression(evaluatedExpression);
-            } catch (IllegalArgumentException e) {
-                //do nothing
+                future.get();
+            } catch (InterruptedException | ExecutionException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Error evaluating expressions", e);
             }
         }
-        return solutionList;
+
+        executor.shutdown();
+        return new SolutionList(new EvaluatedExpressionList(evaluatedExpressions.toArray(new EvaluatedExpression[0])), goal);
     }
 }

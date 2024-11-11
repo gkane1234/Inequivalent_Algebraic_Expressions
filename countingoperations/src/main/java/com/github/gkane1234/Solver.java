@@ -55,16 +55,7 @@ public class Solver {
         @return a <code>SolutionSet</code> representing the solutions found.
     */
     public SolutionList findAllSolutions(double[] values, double goal) {
-        SolutionList solutions = new SolutionList(values,goal);
-        for (int i=0;i<solverSet.getNumExpressions();i++) {
-            if (Solver.equal(solverSet.get(i).evaluateWithValues(values,Solver.ROUNDING),goal)) {
-                    solutions.addSolution(new EvaluatedExpression(solverSet.get(i),values,goal));
-            }
-            if (solutions.getNumSolutions()>MAX_SOLUTIONS) {
-                i=solverSet.getNumExpressions();
-            }
-        }
-        return solutions;
+        return ExpressionSet.findSolutions(solverSet, values, goal, Solver.ROUNDING);
     }
     /**
         Finds all solutions for a given goal using a set of values.
@@ -152,11 +143,10 @@ public class Solver {
         @param numSolutions: an <code>int</code> representing the number of solutions to find.
         @return a <code>List<SolutionSet></code> representing the solutions found.
     */
-    public List<SolutionList> findSolvableValues(int numSolutions) {
+    public List<SolutionList> findSolvableValues(int numSolutions,double goal) {
         int[] defualtRange = new int[]{1,15};
         int[] defaultSolutionRange = new int[]{1,100*this.numValues};
-        double defaultGoal = 24d;
-        return findSolvableValues(numSolutions,defaultGoal,defualtRange,defaultSolutionRange);
+        return findSolvableValues(numSolutions,goal,defualtRange,defaultSolutionRange);
     }
     /**
         Finds all possible sets of values that can be used to make a given goal.
@@ -250,7 +240,7 @@ public class Solver {
         @param b: a <code>double</code> representing the second value to compare.
         @return a <code>boolean</code> representing whether the two values are equal within the given tolerance.
     */
-    private static boolean equal(double a, double b) {
+    public static boolean equal(double a, double b) {
         return Math.abs(a-b)<=TOLERANCE;
     }
 }

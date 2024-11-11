@@ -16,7 +16,11 @@ public class EvaluatedExpressionList {
         for (EvaluatedExpression evaluatedExpression : EvaluatedExpressionList) {
             this.EvaluatedExpressionList.add(evaluatedExpression);
         }
-        values = EvaluatedExpressionList[0].getValues();
+        if (EvaluatedExpressionList.length > 0) {
+            values = EvaluatedExpressionList[0].getValues();
+        } else {
+            values = null;
+        }
     }
 
     /**
@@ -24,6 +28,7 @@ public class EvaluatedExpressionList {
         @param values: a <code>double[]</code> representing the values used in the equation.
     */
     public EvaluatedExpressionList(double[] values) {
+        this.EvaluatedExpressionList=new ArrayList<>();
         this.values=values;
     }
     /**

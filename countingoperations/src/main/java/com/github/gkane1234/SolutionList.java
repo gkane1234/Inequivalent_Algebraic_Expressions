@@ -19,9 +19,9 @@ public class SolutionList extends EvaluatedExpressionList{
             this.addEvaluatedExpression(evaluatedExpression);
         }
     }
-
-    public void addSolution(EvaluatedExpression toAdd) {
-        if (toAdd.getValue()!=this.goal) {
+    @Override
+    public void addEvaluatedExpression(EvaluatedExpression toAdd) {
+        if (!Solver.equal(toAdd.getValue(),this.goal)) {
             throw new IllegalArgumentException("Goal of solution does not match goal of solution list");
         }
         super.addEvaluatedExpression(toAdd);

@@ -3,6 +3,9 @@ package com.github.gkane1234;
 import java.util.Scanner;
 public class CountingMain {
     public static void main(String[] args) {
+        System.out.println("Max Memory: " + Runtime.getRuntime().maxMemory());
+        System.out.println("Total Memory: " + Runtime.getRuntime().totalMemory());
+        System.out.println("Free Memory: " + Runtime.getRuntime().freeMemory());
 
         //TODO: find ways to reduce memory strain:
             //Make each truncator work separately
@@ -10,8 +13,6 @@ public class CountingMain {
         // Start time
         long startTime = System.nanoTime();  // Use System.nanoTime() for higher precision
 
-        // The lines you want to time
-        
         //84.0, 18.0, 78.0, 91.0, 61.0, 87.0, to make 2027
         //(((((18/78)+84)-61)*91)-87)
 
@@ -110,14 +111,13 @@ public class CountingMain {
 
 
 
-        // End time
+
         long endTime = System.nanoTime();
 
-        // Calculate the duration in milliseconds (or nanoseconds, depending on your preference)
         long durationInNano = endTime - startTime;
         double durationInMillis = durationInNano / 1_000_000.0;  // Convert nanoseconds to milliseconds
 
-        // Output the duration
+
         System.out.println("Execution time: " + durationInNano + " nanoseconds");
         System.out.println("Execution time: " + durationInMillis + " milliseconds");
         //System.err.println(expressionList);
