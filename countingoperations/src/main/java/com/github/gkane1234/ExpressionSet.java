@@ -336,25 +336,27 @@ public class ExpressionSet implements Serializable{
         return new EvaluatedExpressionList(evaluatedExpressions);
     }
 
-    public static SolutionList findSolutions(ExpressionSet expressionSet, double[] values, double goal, int rounding) {
+    public static SolutionList findSolutions(ExpressionSet expressionSet, double[] values, double goal, int rounding, int maxSolutions) {
         final int numThreads = 10;
-        final int maxSolutions = 200; // Maximum number of solutions to find
         List<EvaluatedExpression> evaluatedExpressions = new ArrayList<>();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         List<Future<Void>> futures = new ArrayList<>();
         
-        Object lock = new Object(); // For thread-safe list access
+        final Object lock = new Object(); // For thread-safe list access
         AtomicInteger solutionsFound = new AtomicInteger(0);
 
-        int chunkSize = (expressionSet.numExpressions + numThreads - 1) / numThreads;
+        int chunkSize = (expressionSet.numExpressions - 1) / numThreads+1;
         for (int t = 0; t < numThreads; t++) {
             final int start = t * chunkSize;
             final int end = Math.min(start + chunkSize, expressionSet.numExpressions);
             
             futures.add(executor.submit(() -> {
                 for (int i = start; i < end && solutionsFound.get() < maxSolutions; i++) {
+                    
                     double value = expressionSet.expressions[i].evaluateWithValues(values, rounding);
                     if (Solver.equal(value, goal)) { // Check if value equals goal
+                        System.out.println(solutionsFound.get()+" "+evaluatedExpressions.size());
+                        
                         synchronized(lock) {
                             if (solutionsFound.get() < maxSolutions) {
                                 evaluatedExpressions.add(new EvaluatedExpression(expressionSet.expressions[i], values, value));

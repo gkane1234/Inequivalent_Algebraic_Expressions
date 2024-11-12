@@ -7,25 +7,31 @@ import java.io.FileNotFoundException;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.set.hash.TIntHashSet;
 import java.util.Arrays;
+import javax.swing.SwingWorker;
 /**
     Solver class for finding solutions for a given goal using a set of values.
 */
-public class Solver {
+public class Solver extends SwingWorker<Void,String>{
     private static final int NUM_TRUNCATORS = 20;
     private static final int ROUNDING =9;
     private static final double TOLERANCE = 1e-5;
-    private static final int MAX_ATTEMPTS = 1000;
+
     private static final int MAX_SOLUTIONS = 200;
     ExpressionSet solverSet;
     private int numValues;
     private boolean verbose;
+
+    private final CountingOperationsApplet applet;
+
+    private String status;
     /**
         Constructor for the Solver class.
         @param numValues: an <code>int</code> representing the number of values to use.
         @param verbose: a <code>boolean</code> representing whether to print verbose output.
     */
-    Solver(int numValues,boolean verbose, boolean load){
+    Solver(int numValues,boolean verbose, boolean load, CountingOperationsApplet applet){
         this.verbose = verbose;
+        this.applet = applet;
         if (load) {
             try {
                 if (verbose) {
@@ -48,14 +54,26 @@ public class Solver {
         }
         this.numValues=numValues;
     }
+    @Override
+    protected Void doInBackground() {
+        publish(status);
+        return null;
+
+    }
+    @Override
+    protected void process(List<String> chunks) {
+        for (String chunk : chunks) {
+            applet.onSolverUpdate(chunk);
+        }
+    }
     /**
         Finds all solutions for a given goal using a set of values.
         @param values: an <code>double[]</code> representing the values to use.
         @param goal: a <code>double</code> representing the goal to find solutions for.
         @return a <code>SolutionSet</code> representing the solutions found.
     */
-    public SolutionList findAllSolutions(double[] values, double goal) {
-        return ExpressionSet.findSolutions(solverSet, values, goal, Solver.ROUNDING);
+    public SolutionList findAllSolutions(double[] values, double goal,int maxSolutions) {
+        return ExpressionSet.findSolutions(solverSet, values, goal, Solver.ROUNDING, maxSolutions);
     }
     /**
         Finds all solutions for a given goal using a set of values.
@@ -63,12 +81,12 @@ public class Solver {
         @param goal: a <code>double</code> representing the goal to find solutions for.
         @return a <code>SolutionSet</code> representing the solutions found.
     */
-    public SolutionList findAllSolutions(int[] values, double goal) {
+    public SolutionList findAllSolutions(int[] values, double goal,int maxSolutions) {
         double[] doubleValues = new double[values.length];
         for (int i=0;i<values.length;i++) {
             doubleValues[i]=values[i];
         }
-        return findAllSolutions(doubleValues,goal);
+        return findAllSolutions(doubleValues,goal,maxSolutions);
 
     }
     /**
@@ -79,6 +97,9 @@ public class Solver {
     */
     public EvaluatedExpression findFirstSolution(double[] values, double goal) {
         for (int i=0;i<solverSet.getNumExpressions();i++) {
+            if (verbose&&i%100000==0) {
+                publish("Evaluating expression "+i+" of "+solverSet.getNumExpressions());
+            }
             if (Solver.equal(solverSet.get(i).evaluateWithValues(values,Solver.ROUNDING),goal)) {
                 return new EvaluatedExpression(solverSet.get(i),values,goal);
             }
@@ -108,7 +129,8 @@ public class Solver {
         @param solutionRange: an <code>int[]</code> representing the range of solutions to find.
         @return a <code>List<SolutionList></code> representing the solutions found.
     */
-    public List<SolutionList> findSolvableValues(int numSolutions,double goal, int[] valueRange, int[] solutionRange) {
+    public List<SolutionList> findSolvableValues(int numSolutions,double goal, int[] valueRange, int[] solutionRange) throws Exception {
+        final int MAX_ATTEMPTS = 1000;
         Random r = new Random();
 
         List<SolutionList> solvables = new ArrayList<>();
@@ -120,20 +142,24 @@ public class Solver {
             attempts++;
             int[] nextAttempt = r.ints(numValues, valueRange[0], valueRange[1]).toArray();
             if (this.verbose) {
-                System.out.print("Attempting: "+attempts);
-                System.out.print(" ");
-                System.out.println(Arrays.toString(nextAttempt));
+                publish("Attempting: "+attempts);
+                publish(" ");
+                publish(Arrays.toString(nextAttempt));
             }
     
-            SolutionList solutions = findAllSolutions(nextAttempt, goal);
+            SolutionList solutions = findAllSolutions(nextAttempt, goal,solutionRange[1]+1);
             
             if (solutionRange[0] <= solutions.getNumSolutions() && solutions.getNumSolutions() <= solutionRange[1]) {
                 solvables.add(solutions);
                 if (this.verbose) {
-                    System.out.println(attempts);
+                    publish(String.valueOf(attempts));
                 }
                 attempts=0;
             }
+        }
+
+        if (attempts==MAX_ATTEMPTS) {
+            throw new Exception("Constraints not met within "+MAX_ATTEMPTS+" attempts");
         }
     
         return solvables; 
@@ -143,7 +169,7 @@ public class Solver {
         @param numSolutions: an <code>int</code> representing the number of solutions to find.
         @return a <code>List<SolutionSet></code> representing the solutions found.
     */
-    public List<SolutionList> findSolvableValues(int numSolutions,double goal) {
+    public List<SolutionList> findSolvableValues(int numSolutions,double goal) throws Exception {
         int[] defualtRange = new int[]{1,15};
         int[] defaultSolutionRange = new int[]{1,100*this.numValues};
         return findSolvableValues(numSolutions,goal,defualtRange,defaultSolutionRange);
@@ -168,7 +194,7 @@ public class Solver {
                 CountingMain.print(values);
             }
             if (findAllSolutions) {
-                nextSolutionList = findAllSolutions(values, goal);
+                nextSolutionList = findAllSolutions(values, goal,200);
             } else {
                 EvaluatedExpression firstSolution = findFirstSolution(values, goal);
                 nextSolutionList = new SolutionList(values,goal);
@@ -222,9 +248,9 @@ public class Solver {
             boolean inside  = intSet.contains(i);
             i+=delta;
             if (output) {
-                    System.out.print(i);
-                    System.out.print(" ");
-                    System.out.println(outputs.get(i));
+                    publish(String.valueOf(i));
+                    publish(" ");
+                    publish(outputs.get(i).toString());
 
                 }
                 
