@@ -183,7 +183,7 @@ public class CountingOperationsApplet implements SolverUpdateListener {
                 int valueRange[] = {minValue, maxValue};
                 int solutionRange[] = {minSolutions, maxSolutions};
                 try {
-                    currentSolutions = solver.findSolvableValues(1,goal, valueRange, solutionRange).get(0);
+                    currentSolutions = solver.findSolvableValues(goal, valueRange, solutionRange);
                 } catch (Exception ex) {
                     solutionsArea.setText("Failed to find any solutions: " + ex.getMessage());
                     return;
@@ -229,6 +229,8 @@ public class CountingOperationsApplet implements SolverUpdateListener {
     }
     
     public static void main(String[] args) {
-        CountingOperationsApplet applet = new CountingOperationsApplet();
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            new CountingOperationsApplet();
+        });
     }
 }

@@ -1,5 +1,6 @@
 package com.github.gkane1234;
 
+import java.util.Arrays;
 /**
     This class is used to represent a solution to a goal.
 
@@ -10,7 +11,7 @@ public class EvaluatedExpression extends Expression{
     private double[] values;
     private double goal;
     /**
-        Constructor for the Solution class.
+        Constructor for the EvaluatedExpression class.
         @param expression: an <code>Expression</code> representing the expression used to get the solution.
         @param values: a <code>double[]</code> representing the values used in the expression.
         @param goal: a <code>double</code> representing the goal of the solution.
@@ -21,8 +22,8 @@ public class EvaluatedExpression extends Expression{
         this.goal = goal;
     }
     /**
-        Displays the solution as a string.
-        @return a <code>String</code> representing the solution.
+        Displays the EvaluatedExpression as a string.
+        @return a <code>String</code> representing the EvaluatedExpression.
     */
     public String display() {
         ArrayStack<String> stack = new ArrayStack<>(this.order.length);
@@ -54,19 +55,48 @@ public class EvaluatedExpression extends Expression{
         return this.values;
     }
     /**
-        Returns the value of the solution.
-        @return a <code>double</code> representing the value of the solution.
+        Returns the evaluated value of the EvaluatedExpression.
+        @return a <code>double</code> representing the value of the EvaluatedExpression.
     */
     public double getValue() {
         return this.goal;
     }
+
     /**
-        Returns a string representation of the solution.
-        @return a <code>String</code> representing the solution.
+        Checks if two EvaluatedExpressions are the same.
+        @param o: an <code>Object</code> representing the EvaluatedExpression to compare to.
+        @return a <code>boolean</code> representing whether the EvaluatedExpressions are the same.
+    */
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof EvaluatedExpression) {
+            EvaluatedExpression other = (EvaluatedExpression) o;
+            if (Arrays.equals(other.operations, this.operations) && Arrays.equals(other.order, this.order)) {
+                for (int i=0;i<this.values.length;i++) { // two equivalent evaluated expressions can have different value orderings if there are repeats in the values.
+                    if (this.values[this.valueOrder[i]]!=other.values[other.valueOrder[i]]) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+    /**
+        Returns a string representation of the EvaluatedExpression.
+        @return a <code>String</code> representing the EvaluatedExpression.
     */
     @Override
     public String toString() {
         return this.display();
+    }
+    @Override
+    public int hashCode() {
+        double[] valuesInOrder = new double[this.values.length];
+        for(int i =0;i<this.values.length;i++) {
+            valuesInOrder[this.valueOrder[i]] = this.values[i];
+        }
+        return Arrays.hashCode(this.operations)+Arrays.hashCode(this.order)+Arrays.hashCode(valuesInOrder);
     }
 
 }

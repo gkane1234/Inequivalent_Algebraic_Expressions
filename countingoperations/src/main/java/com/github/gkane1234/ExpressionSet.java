@@ -303,7 +303,7 @@ public class ExpressionSet implements Serializable{
         }
         return new ExpressionSet(newExpressions, expressionSet.numExpressions,expressionSet.numValues, expressionSet.rounding, numTruncators);
     }
-    public static EvaluatedExpressionList evaluate(ExpressionSet expressionSet, double[] values, int rounding) {
+    public static EvaluatedExpressionSet evaluate(ExpressionSet expressionSet, double[] values, int rounding) {
         final int numThreads = 10;
         EvaluatedExpression[] evaluatedExpressions = new EvaluatedExpression[expressionSet.expressions.length];
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
@@ -333,12 +333,12 @@ public class ExpressionSet implements Serializable{
         }
 
         executor.shutdown();
-        return new EvaluatedExpressionList(evaluatedExpressions);
+        return new EvaluatedExpressionSet(evaluatedExpressions);
     }
 
     public static SolutionList findSolutions(ExpressionSet expressionSet, double[] values, double goal, int rounding, int maxSolutions) {
         final int numThreads = 10;
-        List<EvaluatedExpression> evaluatedExpressions = new ArrayList<>();
+        SolutionList solutions = new SolutionList(values,goal);
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         List<Future<Void>> futures = new ArrayList<>();
         
@@ -355,11 +355,10 @@ public class ExpressionSet implements Serializable{
                     
                     double value = expressionSet.expressions[i].evaluateWithValues(values, rounding);
                     if (Solver.equal(value, goal)) { // Check if value equals goal
-                        System.out.println(solutionsFound.get()+" "+evaluatedExpressions.size());
                         
                         synchronized(lock) {
                             if (solutionsFound.get() < maxSolutions) {
-                                evaluatedExpressions.add(new EvaluatedExpression(expressionSet.expressions[i], values, value));
+                                solutions.addEvaluatedExpression(new EvaluatedExpression(expressionSet.expressions[i], values, value));
                                 solutionsFound.incrementAndGet();
                             }
                         }
@@ -379,6 +378,6 @@ public class ExpressionSet implements Serializable{
         }
 
         executor.shutdown();
-        return new SolutionList(new EvaluatedExpressionList(evaluatedExpressions.toArray(new EvaluatedExpression[0])), goal);
+        return solutions;
     }
 }

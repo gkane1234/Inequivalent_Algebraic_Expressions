@@ -1,6 +1,6 @@
 package com.github.gkane1234;
 
-public class SolutionList extends EvaluatedExpressionList{
+public class SolutionList extends EvaluatedExpressionSet{
 
     private double goal;
 
@@ -13,9 +13,9 @@ public class SolutionList extends EvaluatedExpressionList{
         this.goal=goal;
     }
 
-    public SolutionList(EvaluatedExpressionList EvaluatedExpressionList, double goal) {
-        this(EvaluatedExpressionList.getValues(),goal);
-        for (EvaluatedExpression evaluatedExpression : EvaluatedExpressionList.getEvaluatedExpressionList()) {
+    public SolutionList(EvaluatedExpressionSet evaluatedExpressionSet, double goal) {
+        this(evaluatedExpressionSet.getValues(),goal);
+        for (EvaluatedExpression evaluatedExpression : evaluatedExpressionSet.getEvaluatedExpressionList()) {
             this.addEvaluatedExpression(evaluatedExpression);
         }
     }
@@ -24,6 +24,7 @@ public class SolutionList extends EvaluatedExpressionList{
         if (!Solver.equal(toAdd.getValue(),this.goal)) {
             throw new IllegalArgumentException("Goal of solution does not match goal of solution list");
         }
+
         super.addEvaluatedExpression(toAdd);
     }
 

@@ -61,7 +61,7 @@ public class Solver extends SwingWorker<Void,String>{
 
     }
     @Override
-    protected void process(List<String> chunks) {
+    public void process(List<String> chunks) {
         for (String chunk : chunks) {
             applet.onSolverUpdate(chunk);
         }
@@ -121,24 +121,14 @@ public class Solver extends SwingWorker<Void,String>{
 
     }
 
-    /**
-        Finds a random set of values that can be used to make a given goal.
-        @param numSolutions: an <code>int</code> representing the number of solutions to find.
-        @param goal: a <code>double</code> representing the goal to find solutions for.
-        @param valueRange: an <code>int[]</code> representing the range of values to use.
-        @param solutionRange: an <code>int[]</code> representing the range of solutions to find.
-        @return a <code>List<SolutionList></code> representing the solutions found.
-    */
-    public List<SolutionList> findSolvableValues(int numSolutions,double goal, int[] valueRange, int[] solutionRange) throws Exception {
+    public SolutionList findSolvableValues(double goal, int[] valueRange, int[] solutionRange) throws Exception {
         final int MAX_ATTEMPTS = 1000;
         Random r = new Random();
 
-        List<SolutionList> solvables = new ArrayList<>();
+        int attempts = 0;
 
-        int attempts =0;
-    
-        while(solvables.size()<numSolutions&&attempts<MAX_ATTEMPTS) {
-            
+        while (attempts<MAX_ATTEMPTS) {
+
             attempts++;
             int[] nextAttempt = r.ints(numValues, valueRange[0], valueRange[1]).toArray();
             if (this.verbose) {
@@ -150,18 +140,28 @@ public class Solver extends SwingWorker<Void,String>{
             SolutionList solutions = findAllSolutions(nextAttempt, goal,solutionRange[1]+1);
             
             if (solutionRange[0] <= solutions.getNumSolutions() && solutions.getNumSolutions() <= solutionRange[1]) {
-                solvables.add(solutions);
-                if (this.verbose) {
-                    publish(String.valueOf(attempts));
-                }
-                attempts=0;
+                return solutions;
             }
         }
 
-        if (attempts==MAX_ATTEMPTS) {
-            throw new Exception("Constraints not met within "+MAX_ATTEMPTS+" attempts");
+        throw new Exception("Constraints not met within "+MAX_ATTEMPTS+" attempts");
+    }
+
+    /**
+        Finds a random set of values that can be used to make a given goal.
+        @param numSolutions: an <code>int</code> representing the number of solutions to find.
+        @param goal: a <code>double</code> representing the goal to find solutions for.
+        @param valueRange: an <code>int[]</code> representing the range of values to use.
+        @param solutionRange: an <code>int[]</code> representing the range of solutions to find.
+        @return a <code>List<SolutionList></code> representing the solutions found.
+    */
+    public List<SolutionList> findListOfSolvableValues(int numSolutions,double goal, int[] valueRange, int[] solutionRange) throws Exception {
+
+        List<SolutionList> solvables = new ArrayList<>();
+
+        while(solvables.size()<numSolutions) {
+            solvables.add(findSolvableValues(goal, valueRange, solutionRange));
         }
-    
         return solvables; 
     }
     /**
@@ -169,10 +169,10 @@ public class Solver extends SwingWorker<Void,String>{
         @param numSolutions: an <code>int</code> representing the number of solutions to find.
         @return a <code>List<SolutionSet></code> representing the solutions found.
     */
-    public List<SolutionList> findSolvableValues(int numSolutions,double goal) throws Exception {
-        int[] defualtRange = new int[]{1,15};
-        int[] defaultSolutionRange = new int[]{1,100*this.numValues};
-        return findSolvableValues(numSolutions,goal,defualtRange,defaultSolutionRange);
+    public List<SolutionList> findListOfSolvableValues(int numSolutions,double goal) throws Exception {
+        final int[] defualtRange = new int[]{1,15};
+        final int[] defaultSolutionRange = new int[]{1,100*this.numValues};
+        return findListOfSolvableValues(numSolutions,goal,defualtRange,defaultSolutionRange);
     }
     /**
         Finds all possible sets of values that can be used to make a given goal.
@@ -228,8 +228,8 @@ public class Solver extends SwingWorker<Void,String>{
         TIntObjectHashMap <EvaluatedExpression> outputs = new TIntObjectHashMap<>();
 
 
-        EvaluatedExpressionList evaluatedExpressionList = ExpressionSet.evaluate(solverSet, values, Solver.ROUNDING);
-        for (EvaluatedExpression evaluatedExpression : evaluatedExpressionList.getEvaluatedExpressionList()) {
+        EvaluatedExpressionSet evaluatedExpressionSet = ExpressionSet.evaluate(solverSet, values, Solver.ROUNDING);
+        for (EvaluatedExpression evaluatedExpression : evaluatedExpressionSet.getEvaluatedExpressionList()) {
             double answer = evaluatedExpression.getValue();
             if (Solver.equal(answer, Math.round(answer))) {
                 int wholeNumberAnswer = (int)Math.round(answer);
