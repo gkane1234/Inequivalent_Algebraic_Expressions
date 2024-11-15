@@ -80,7 +80,6 @@ public class Expression implements Serializable{
     @param values: the values of the expression.
     @param rounding: the number of decimal places to round the result to.
     */
-
     private double evaluateRpn(double[] values,int rounding) {
         
         DoubleArrayStack stack = new DoubleArrayStack(this.order.length);
@@ -107,6 +106,10 @@ public class Expression implements Serializable{
         double nonRounded = stack.pop();
         //return nonRounded;
         return Math.round(nonRounded * Math.pow(10, rounding)) / Math.pow(10,rounding);
+    }
+
+    public boolean equals(Expression expression) {
+        return Arrays.equals(this.valueOrder, expression.valueOrder) && Arrays.equals(this.operations, expression.operations) && Arrays.equals(this.order, expression.order);
     }
     /**
         Converts the expression to a parenthetical string.

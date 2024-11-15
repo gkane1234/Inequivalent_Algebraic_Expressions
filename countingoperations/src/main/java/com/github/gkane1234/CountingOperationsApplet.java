@@ -1,5 +1,8 @@
 package com.github.gkane1234;
 
+import java.util.Arrays;
+import java.util.Random;
+
 public class CountingOperationsApplet implements SolverUpdateListener {
     private Solver solver;
     private SolutionList currentSolutions;
@@ -229,8 +232,13 @@ public class CountingOperationsApplet implements SolverUpdateListener {
     }
     
     public static void main(String[] args) {
+        
+
+        
+        /* 
         javax.swing.SwingUtilities.invokeLater(() -> {
             new CountingOperationsApplet();
         });
+        */
     }
 }

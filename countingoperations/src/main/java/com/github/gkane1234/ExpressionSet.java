@@ -63,6 +63,7 @@ public class ExpressionSet implements Serializable{
         @param rounding: an <code>int</code> representing the number of decimal places to round to.
         @param numTruncators: an <code>int</code> representing the number of truncators to use.
     */
+    
     public ExpressionSet(Expression[] expressions,int numExpressions,int numValues, int rounding, int numTruncators) {
         
         if (expressions.length==0) {
@@ -96,6 +97,9 @@ public class ExpressionSet implements Serializable{
             truncators[i]=truncator;
         }
 
+    }
+    public ExpressionSet(Expression[] expressions, int numExpressions, int numValues) {
+        this(expressions, numExpressions, numValues, 0, 0);
     }
     /**
         Clears the seen hashset to free up memory.
@@ -189,6 +193,23 @@ public class ExpressionSet implements Serializable{
     */
     public void forceAdd(Expression expression) {
         expressions[this.numExpressions++]=expression;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof ExpressionSet) {
+            ExpressionSet e = (ExpressionSet)o;
+            if (this.numExpressions!=e.numExpressions) {
+                return false;
+            }
+            for (int i = 0; i < this.numExpressions; i++) {
+                if (!this.expressions[i].equals(e.expressions[i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
