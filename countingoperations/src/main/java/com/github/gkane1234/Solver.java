@@ -29,7 +29,7 @@ public class Solver extends SwingWorker<Void,String>{
         @param numValues: an <code>int</code> representing the number of values to use.
         @param verbose: a <code>boolean</code> representing whether to print verbose output.
     */
-    Solver(int numValues,boolean verbose, boolean load, CountingOperationsApplet applet){
+    Solver(int numValues,boolean verbose, boolean load, CountingOperationsApplet applet, boolean compressed){
         this.verbose = verbose;
         this.applet = applet;
         if (load) {
@@ -37,13 +37,24 @@ public class Solver extends SwingWorker<Void,String>{
                 if (verbose) {
                     System.err.println("Loading expression set...");
                 }
-                solverSet = ExpressionSet.load(numValues, Counter.run(numValues).intValue(),verbose);
+                if (compressed) {
+                    solverSet = CompressedExpressionSet.loadCompressed(numValues);
+                } else {
+                    solverSet = ExpressionSet.loadCompressed(numValues);
+                }
             } catch (FileNotFoundException e) {
                 if (verbose) {
                     System.err.println("File not found, creating instead...");
                 }
                 solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose).getExpressionSet();
-                ExpressionSet.save(solverSet,verbose);
+                if (compressed) {
+                    CompressedExpressionSet compressedExpressionSet = new CompressedExpressionSet(ExpressionCompression.compressExpressionSet(solverSet),solverSet.getNumExpressions(),numValues);
+                    CompressedExpressionSet.saveCompressed(compressedExpressionSet,verbose);
+                    solverSet = compressedExpressionSet;
+                } else {
+                    ExpressionSet.saveCompressed(solverSet,verbose);
+                }
+                    
             }
             
         } else {
@@ -191,7 +202,7 @@ public class Solver extends SwingWorker<Void,String>{
         while (allValuesInRangeIterator.hasNext()) {
             int[] values = allValuesInRangeIterator.next();
             if (++tracker%1000==0) {
-                CountingMain.print(values);
+                System.err.println(Arrays.toString(values));
             }
             if (findAllSolutions) {
                 nextSolutionList = findAllSolutions(values, goal,200);

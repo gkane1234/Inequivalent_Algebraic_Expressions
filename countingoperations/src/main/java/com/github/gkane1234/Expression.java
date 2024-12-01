@@ -23,8 +23,15 @@ public class Expression implements Serializable{
         To evaluate this expression with values a=3, b=4.7, c=5 the method evaluate_with_values would be used with values = [3,4.7,5].
     */
     public Expression(byte[] valueOrder,byte[] operations,boolean[] order) {
-        
-
+        int numValues = 0;
+        for (int i=0;i<order.length;i++) {
+            if (order[i]) {
+                numValues++;
+            }
+        }
+        if (numValues!=valueOrder.length) {
+            throw new IllegalArgumentException("Invalid expression: " + Arrays.toString(order));
+        }
         this.valueOrder=valueOrder;
         this.operations=operations;
         this.order=order;
@@ -121,10 +128,17 @@ public class Expression implements Serializable{
         byte values_pointer =0;
         byte operations_pointer = 0;
 
+        
         for (boolean isNumber : expression.order) {
             if (isNumber) {
+                if (values_pointer>=expression.valueOrder.length) {
+                    throw new IllegalStateException("Invalid expression: " + Arrays.toString(expression.order));
+                }
                 stack.push(String.valueOf(expression.valueOrder[values_pointer++]));
             } else {
+                if (operations_pointer>=expression.operations.length) {
+                    throw new IllegalStateException("Invalid expression: " + Arrays.toString(expression.order));
+                }
                 byte opCode = expression.operations[operations_pointer++];
                 String b = stack.pop();
                 String a = stack.pop();

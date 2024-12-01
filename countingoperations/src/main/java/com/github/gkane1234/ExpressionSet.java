@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 */
 public class ExpressionSet implements Serializable{
     private static final long serialVersionUID = 1L;
+    protected static final int BUFFER_SIZE = 1024*1024;
 
     private static final String FILE_PATH = "counting_operations/outputs/";
 
@@ -42,8 +43,7 @@ public class ExpressionSet implements Serializable{
     //private CustomFloatHashSet[] seen;
     //private TCustomHashSet<Float>[] seen;
     private double[][] truncators;
-    public int numTruncators;
-    public Operation[] ops;
+    private int numTruncators;
 
     /**
         Constructor for an ExpressionSet.
@@ -54,6 +54,10 @@ public class ExpressionSet implements Serializable{
     public ExpressionSet(int numValues, int rounding, int numTruncators) {
         
         this(new Expression[] {}, 0, numValues, rounding, numTruncators);
+    }
+
+    public ExpressionSet(Expression[] expressions, int numExpressions, int numValues) {
+        this(expressions, numExpressions, numValues, 0, 0);
     }
     /**
         Constructor for an ExpressionSet.
@@ -66,7 +70,7 @@ public class ExpressionSet implements Serializable{
     
     public ExpressionSet(Expression[] expressions,int numExpressions,int numValues, int rounding, int numTruncators) {
         
-        if (expressions.length==0) {
+        if (expressions!=null&&expressions.length==0) {
             this.expressions=new Expression[getMaximumSize(numValues)];
             this.numExpressions=0;
         } else {
@@ -98,9 +102,7 @@ public class ExpressionSet implements Serializable{
         }
 
     }
-    public ExpressionSet(Expression[] expressions, int numExpressions, int numValues) {
-        this(expressions, numExpressions, numValues, 0, 0);
-    }
+
     /**
         Clears the seen hashset to free up memory.
     */
@@ -197,15 +199,19 @@ public class ExpressionSet implements Serializable{
 
     @Override
     public boolean equals(Object o) {
+        //System.err.println(this);
+        //System.err.println(o);
         if (o instanceof ExpressionSet) {
             ExpressionSet e = (ExpressionSet)o;
             if (this.numExpressions!=e.numExpressions) {
                 return false;
             }
             for (int i = 0; i < this.numExpressions; i++) {
+                //System.out.println(this.expressions[i]+" "+e.expressions[i]);
                 if (!this.expressions[i].equals(e.expressions[i])) {
                     return false;
                 }
+
             }
             return true;
         }
@@ -220,9 +226,9 @@ public class ExpressionSet implements Serializable{
     public static void save(ExpressionSet expressionSet, boolean verbose) {
         final int BUFFER_SIZE = 1024*1024;
         expressionSet.clearSeen();
-        String filename = FILE_PATH + "expressionSetLarge" + expressionSet.numValues + "_" + expressionSet.numExpressions + ".ser";
+        String filename = FILE_PATH + "expressionSet_" + expressionSet.numValues + "_" + expressionSet.numExpressions + ".ser";
         try (BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(filename),BUFFER_SIZE);
-             ObjectOutputStream oos = new ObjectOutputStream(bos)) {
+            ObjectOutputStream oos = new ObjectOutputStream(bos)) {
             for (int i = 0; i < expressionSet.numExpressions; i++) {
                 if (verbose&&i%1000000==0) {
                     System.out.println("Saving expression "+i);
@@ -233,6 +239,49 @@ public class ExpressionSet implements Serializable{
             e.printStackTrace();
         }
     }
+
+    public static void saveCompressed(ExpressionSet expressionSet, boolean verbose) {
+        final int BUFFER_SIZE = 1024*1024;
+        System.err.println("Compressing expression set");
+        long[] compressedExpressions = ExpressionCompression.compressExpressionSet(expressionSet);
+        String filename = getCompressedFilename(expressionSet.numValues);
+        try (BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(filename),BUFFER_SIZE);
+            ObjectOutputStream oos = new ObjectOutputStream(bos)) {
+                if (verbose) {
+                    System.out.println("Saving compressed expression set");
+                }
+                oos.writeObject(compressedExpressions);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static ExpressionSet loadCompressed(String filename, int numValues,int numExpressions, boolean verbose) throws FileNotFoundException {
+        long startTime = System.currentTimeMillis();
+        System.err.println(filename);
+
+        try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(filename),BUFFER_SIZE);
+            ObjectInputStream ois = new ObjectInputStream(bis)) {
+            long[] compressedExpressions = (long[]) ois.readObject();
+            long endTime = System.currentTimeMillis();
+            System.out.println("Loaded compressed expression set in "+(endTime-startTime)/1000.0+" seconds");
+            return ExpressionCompression.decompressExpressionSet(compressedExpressions,numExpressions,numValues,verbose);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+            throw new FileNotFoundException("File not found: " + filename);
+        }
+
+
+    }
+    public static ExpressionSet loadCompressed(int numValues) throws FileNotFoundException {
+        String filename = getCompressedFilename(numValues);
+        return loadCompressed(filename, numValues, getMaximumSize(numValues), true);
+    }
+
+    public static String getCompressedFilename(int numValues) {
+        return FILE_PATH+"expressionSet_"+numValues+"_"+getMaximumSize(numValues)+"_compressed.ser";
+    }
     /**
         Loads the expression set from a file which contains all algebraically inequivalent expressions with a given number of values.
         @param numValues: an <code>int</code> representing the number of values in the expressions.
@@ -240,7 +289,7 @@ public class ExpressionSet implements Serializable{
     */
     public static ExpressionSet load(int numValues) throws FileNotFoundException {
         int numExpressions = getMaximumSize(numValues);
-        String filename = FILE_PATH+"expressionSet"+numValues+"_"+numExpressions+".ser";
+        String filename = FILE_PATH+"expressionSet_"+numValues+"_"+numExpressions+".ser";
         return load(filename, numValues, numExpressions, true);
     }
     /**
@@ -250,7 +299,7 @@ public class ExpressionSet implements Serializable{
         @return an <code>ExpressionSet</code> representing the loaded set.
     */
     public static ExpressionSet load(int numValues, int numExpressions) throws FileNotFoundException {
-        String filename = FILE_PATH+"expressionSet"+numValues+"_"+numExpressions+".ser";
+        String filename = FILE_PATH+"expressionSet_"+numValues+"_"+numExpressions+".ser";
         return load(filename, numValues, numExpressions, true);
 
     }
@@ -262,7 +311,7 @@ public class ExpressionSet implements Serializable{
         @return an <code>ExpressionSet</code> representing the loaded set.
     */
     public static ExpressionSet load(int numValues, int numExpressions, boolean verbose) throws FileNotFoundException {
-        String filename = FILE_PATH+"expressionSetLarge"+numValues+"_"+numExpressions+".ser";
+        String filename = FILE_PATH+"expressionSet_"+numValues+"_"+numExpressions+".ser";
         return load(filename, numValues, numExpressions, verbose);
     }
     /**
@@ -274,13 +323,11 @@ public class ExpressionSet implements Serializable{
         @return an <code>ExpressionSet</code> representing the loaded set.
     */
     public static ExpressionSet load(String filename, int numValues,int numExpressions, boolean verbose) throws FileNotFoundException {
-        final int BUFFER_SIZE = 1024*1024;
         // Use a thread-safe list to store expressions
         long startTime = System.currentTimeMillis();
 
         int decile = numExpressions/10;
         Expression[] expressions = new Expression[numExpressions];
-        
         try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(filename),BUFFER_SIZE);
              ObjectInputStream ois = new ObjectInputStream(bis)) {
             
@@ -299,6 +346,7 @@ public class ExpressionSet implements Serializable{
             }
             
         } catch (IOException e) {
+            System.err.println(e);
             throw new FileNotFoundException("File not found: " + filename);
         }
         long endTime = System.currentTimeMillis();
@@ -326,19 +374,20 @@ public class ExpressionSet implements Serializable{
     }
     public static EvaluatedExpressionSet evaluate(ExpressionSet expressionSet, double[] values, int rounding) {
         final int numThreads = 10;
-        EvaluatedExpression[] evaluatedExpressions = new EvaluatedExpression[expressionSet.expressions.length];
+
+        EvaluatedExpression[] evaluatedExpressions = new EvaluatedExpression[expressionSet.getNumExpressions()];
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         List<Future<Void>> futures = new ArrayList<>();
 
-        int chunkSize = (expressionSet.numExpressions + numThreads - 1) / numThreads;
+        int chunkSize = (expressionSet.getNumExpressions() + numThreads - 1) / numThreads;
         for (int t = 0; t < numThreads; t++) {
             final int start = t * chunkSize;
-            final int end = Math.min(start + chunkSize, expressionSet.numExpressions);
+            final int end = Math.min(start + chunkSize, expressionSet.getNumExpressions());
             
             futures.add(executor.submit(() -> {
                 for (int i = start; i < end; i++) {
-                    double value = expressionSet.expressions[i].evaluateWithValues(values, rounding);
-                    evaluatedExpressions[i] = new EvaluatedExpression(expressionSet.expressions[i], values, value);
+                    double value = expressionSet.get(i).evaluateWithValues(values, rounding);
+                    evaluatedExpressions[i] = new EvaluatedExpression(expressionSet.get(i), values, value);
                 }
                 return null;
             }));
@@ -359,6 +408,7 @@ public class ExpressionSet implements Serializable{
 
     public static SolutionList findSolutions(ExpressionSet expressionSet, double[] values, double goal, int rounding, int maxSolutions) {
         final int numThreads = 10;
+        long startTime = System.currentTimeMillis();
         SolutionList solutions = new SolutionList(values,goal);
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         List<Future<Void>> futures = new ArrayList<>();
@@ -369,17 +419,17 @@ public class ExpressionSet implements Serializable{
         int chunkSize = (expressionSet.numExpressions - 1) / numThreads+1;
         for (int t = 0; t < numThreads; t++) {
             final int start = t * chunkSize;
-            final int end = Math.min(start + chunkSize, expressionSet.numExpressions);
+            final int end = Math.min(start + chunkSize, expressionSet.getNumExpressions());
             
             futures.add(executor.submit(() -> {
                 for (int i = start; i < end && solutionsFound.get() < maxSolutions; i++) {
                     
-                    double value = expressionSet.expressions[i].evaluateWithValues(values, rounding);
+                    double value = expressionSet.get(i).evaluateWithValues(values, rounding);
                     if (Solver.equal(value, goal)) { // Check if value equals goal
                         
                         synchronized(lock) {
                             if (solutionsFound.get() < maxSolutions) {
-                                solutions.addEvaluatedExpression(new EvaluatedExpression(expressionSet.expressions[i], values, value));
+                                solutions.addEvaluatedExpression(new EvaluatedExpression(expressionSet.get(i), values, value));
                                 solutionsFound.incrementAndGet();
                             }
                         }
@@ -399,6 +449,8 @@ public class ExpressionSet implements Serializable{
         }
 
         executor.shutdown();
+        long endTime = System.currentTimeMillis();
+        System.out.println("Found "+solutions.getNumSolutions()+" solutions in "+(endTime-startTime)/1000.0+" seconds");
         return solutions;
     }
 }

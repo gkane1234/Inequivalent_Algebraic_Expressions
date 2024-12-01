@@ -1,17 +1,27 @@
 package com.github.gkane1234;
 
+import java.util.Arrays;
+import java.util.Random;
 import java.util.Scanner;
+import java.io.FileNotFoundException;
+
 public class CountingMain {
     public static void main(String[] args) {
         System.out.println("Max Memory: " + Runtime.getRuntime().maxMemory());
         System.out.println("Total Memory: " + Runtime.getRuntime().totalMemory());
         System.out.println("Free Memory: " + Runtime.getRuntime().freeMemory());
+        //testCompressionOfEntireExpressionSet(7);
+
+
+        
 
         //TODO: find ways to reduce memory strain:
             //Make each truncator work separately
             //Reduce the size of the range of numbers we're storing 
         // Start time
-        long startTime = System.nanoTime();  // Use System.nanoTime() for higher precision
+
+        
+        //long startTime = System.nanoTime();  // Use System.nanoTime() for higher precision
 
         //84.0, 18.0, 78.0, 91.0, 61.0, 87.0, to make 2027
         //(((((18/78)+84)-61)*91)-87)
@@ -24,13 +34,11 @@ public class CountingMain {
         //System.out.println(CountingPossibilities.numberOfDistinctSetsOfNumbersWhereOrderDoesNotMatter(10,100));
 
 
+        
+        //Solver s = new Solver(numValues,true,true,null);
 
-        Scanner scanner = new Scanner(System.in);
+        inputValuesForGoalAndSolutions(7, null);
 
-        int numValues = 7;
-        Solver s = new Solver(numValues,true,true);
-
-        int[] range = {1,100000};
 
         //s.findFirstInRange(values, range, false, true);
 
@@ -63,6 +71,71 @@ public class CountingMain {
 
  
         
+        
+    }
+    public static void inputValuesForGoalAndSolutions(int numValues, int[] solutionRange) {
+        if (solutionRange==null) {
+            solutionRange = new int[]{1,10000};
+        }
+        if (numValues==0) {
+            numValues = 7;
+        }
+        
+        Scanner scanner = new Scanner(System.in);
+        Solver s = new Solver(numValues, false, true, null, true);
+
+        while (true) {
+            System.out.print("Enter a goal value (or type 'exit' to quit): ");
+            String input = scanner.nextLine();
+
+            if (input.equalsIgnoreCase("exit")) {
+                break;
+            }
+
+            try {
+                double goal = Double.parseDouble(input);
+                
+                System.out.print("Enter " + numValues + " values separated by spaces: ");
+                String[] valueStrings = scanner.nextLine().trim().split("\\s+");
+                
+                if (valueStrings.length != numValues) {
+                    System.out.println("Please enter exactly " + numValues + " values.");
+                    continue;
+                }
+
+                double[] values = new double[numValues];
+                for (int i = 0; i < numValues; i++) {
+                    values[i] = Double.parseDouble(valueStrings[i]);
+                }
+
+                SolutionList solutions = s.findAllSolutions(values, goal, solutionRange[1]);
+                
+                if (solutions.getNumSolutions() == 0) {
+                    System.out.println("No solutions found for these values and goal.");
+                } else {
+                    System.out.println("Found " + solutions.getNumSolutions() + " solutions:");
+                    for (EvaluatedExpression solution : solutions.getEvaluatedExpressionList()) {
+                        System.out.println(solution.display() + " = " + goal);
+                    }
+                }
+
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter valid numbers.");
+            }
+        }
+        scanner.close();
+    }
+    public static void inputValuesForFirstInRange(int numValues, int[] range) {
+        if (range==null) {
+            range = new int[]{1,100000};
+        }
+        if (numValues==0) {
+            numValues = 7;
+        }
+        long startTime = System.nanoTime();  // Use System.nanoTime() for higher precision
+        Scanner scanner = new Scanner(System.in);
+        Solver s = new Solver(numValues, false, true, null, true);
+
         while (true) {
             System.out.print("Enter a new goal value (or type 'exit' to quit): ");
             String input = scanner.nextLine();
@@ -123,42 +196,70 @@ public class CountingMain {
         //System.err.println(expressionList);
         //System.err.println(expressionList.getExpressions().size());
         //System.err.println(Counter.run(numValues));
+    }
+    public static void testCompressionOfEntireExpressionSet(int numValues) {
+        ExpressionSet e1 = null;
+        try {
+            e1 = ExpressionSet.load(numValues, Counter.run(numValues).intValue(), false);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
         
-    }
-    public static void print(Object[] objs) {
-        for (Object obj : objs) {
-            System.err.print(obj);
-            System.err.print(", ");
+        ExpressionSet.saveCompressed(e1, true);
+        ExpressionSet e2 = null;
+        try {
+            e2 = ExpressionSet.loadCompressed(numValues);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
         }
-        System.err.println("");
-    }
-    public static void print(byte[] objs) {
-        for (byte obj : objs) {
-            System.err.print(obj);
-            System.err.print(", ");
+        if (e1.equals(e2)) {
+            System.err.println("Expression sets are equal");
+        } else {
+            System.err.println("Expression sets are not equal");
         }
-        System.err.println("");
     }
-    public static void print(boolean[] objs) {
-        for (boolean obj : objs) {
-            System.err.print(obj);
-            System.err.print(", ");
+    public static void testExpressionCompression() {
+        for (int i = 2; i <= 7; i++) {
+            System.err.println("Testing "+i);
+            testExpressionCompressionOneValue(i, 100);
         }
-        System.err.println("");
     }
-    public static void print(double[] objs) {
-        for (double obj : objs) {
-            System.err.print(obj);
-            System.err.print(", ");
+    public static void testExpressionCompressionOneValue(int numValues,int numExpressions) {
+
+        Solver s = new Solver(numValues, false, true, null);
+        Random r = new Random();
+
+       
+
+
+
+        Expression[] expressions = new Expression[numExpressions];
+        System.err.println("Testing "+numExpressions+" expressions");
+        for (int i = 0; i < numExpressions; i++) {
+            int rIndex = (int)(r.nextDouble()*s.solverSet.getNumExpressions());
+            Expression randomExpression = s.solverSet.get(rIndex);
+            long compressedExpression = ExpressionCompression.compressExpression(randomExpression);
+            Expression decompressedExpression  = ExpressionCompression.decompressExpression(compressedExpression, numValues);
+            expressions[i]=randomExpression;
+            if (!randomExpression.equals(decompressedExpression)) {
+                System.err.println("Expressions are not equal");
+                System.err.println(randomExpression);
+                System.err.println(decompressedExpression);
+            }
         }
-        System.err.println("");
-    }
-    public static void print(int[] objs) {
-        for (int obj : objs) {
-            System.err.print(obj);
-            System.err.print(", ");
+        System.err.println("Done testing expressions");
+        System.err.println("Compressing expression set");
+        ExpressionSet e = new ExpressionSet(expressions,expressions.length,numValues);
+        
+        long[] compressedExpressionSet = ExpressionCompression.compressExpressionSet(e);
+
+        ExpressionSet decompressedExpressionSet = ExpressionCompression.decompressExpressionSet(compressedExpressionSet, numExpressions,numValues);
+        if (!e.equals(decompressedExpressionSet)) {
+            System.err.println("Expression sets are not equal");
         }
-        System.err.println("");
+        System.err.println("Done testing expression set");
+        
+        
     }
 
 
