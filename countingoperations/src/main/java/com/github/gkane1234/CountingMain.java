@@ -12,15 +12,18 @@ public class CountingMain {
         System.out.println("Free Memory: " + Runtime.getRuntime().freeMemory());
         //testCompressionOfEntireExpressionSet(7);
         //testExpressionCompression(true,true);
+        updateCompressions();
 
         long startTime = System.currentTimeMillis();
 
-        ExpressionDynamic expressionDynamic = new ExpressionDynamic(7, 5, 20, null, false, true, true);
+        //ExpressionDynamic expressionDynamic = new ExpressionDynamic(7, 5, 20, null, false, true, true);
 
-        ExpressionSet expressionSet = expressionDynamic.getExpressionSet();
+        //ExpressionSet expressionSet = expressionDynamic.getExpressionSet();
+        inputGoal(6);
 
         long endTime = System.currentTimeMillis();
         System.out.println("Time taken: "+(endTime-startTime)/1000.0+" seconds");
+
 
         //System.err.println(expressionSetDB);
         
@@ -81,6 +84,45 @@ public class CountingMain {
  
         
         
+    }
+    public static void updateCompressions() {
+
+        for (int i = 1; i <= 7; i++) {
+            try {
+                ExpressionSet e = ExpressionSet.load(i);
+                ExpressionCompression.compressExpressionSet(e);
+                ExpressionSet.saveCompressed(e, true);
+            } catch (FileNotFoundException e) {
+                System.err.println("File not found for "+i);
+            }
+        }
+    }
+    public static void inputGoal(int numValues) {
+        Scanner scanner = new Scanner(System.in);
+        Solver s = new Solver(numValues, true, true, null, true);
+        while (true) {
+            System.out.print("Enter a goal value (or type 'exit' to quit): ");
+            String input = scanner.nextLine();
+            if (input.equalsIgnoreCase("exit")) {
+                break;
+            }
+            try {
+                double goal = Double.parseDouble(input);
+                try {
+                    SolutionList solutions = s.findSolvableValues(goal, new int[]{1,15}, new int[]{1,10000});
+                    System.out.println(solutions.getNumSolutions()+" solutions found for this goal.");
+                    System.out.println(Arrays.toString(solutions.getValues()));
+                    System.out.println("Input anything to see the first solution");
+                    scanner.nextLine();
+                    System.out.println(solutions.getEvaluatedExpression());
+                } catch (Exception e) {
+                    System.out.println("No solutions found for this goal.");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter valid numbers.");
+            }
+        }
+        scanner.close();
     }
     public static void inputValuesForGoalAndSolutions(int numValues, int[] solutionRange) {
         if (solutionRange==null) {

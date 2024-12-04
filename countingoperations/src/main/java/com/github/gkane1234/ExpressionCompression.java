@@ -8,15 +8,23 @@ import java.util.List;
 
 public class ExpressionCompression {
     public static int[] REQUIRED_BITS(int numValues) {
-        //int[] requiredBitsValueOrders = {0,1,3,5,7,9,12,15,18,21};
-        int requiredBitsValueOrder = (int) (Math.ceil(Math.log(factorial(numValues))/Math.log(2)));
-        int requiredBitsOperations = 2*(numValues)-2;
-        int requiredBitsOrder = Math.max(2*(numValues)-4, 0);
+        int requiredBitsValueOrder = getRequiredBitsValueOrder(numValues);
+        int requiredBitsOperations = getRequiredBitsOperations(numValues);
+        int requiredBitsOrder = getRequiredBitsOrder(numValues);
         int requiredBitsTotal = Math.max(requiredBitsValueOrder+requiredBitsOperations+requiredBitsOrder, 1);
         return new int[]{requiredBitsValueOrder,
                         requiredBitsOperations,
                         requiredBitsOrder,
                         requiredBitsTotal};
+    }
+    public static int getRequiredBitsOrder(int numValues) {
+        return Math.max(2*(numValues)-5, 0);
+    }
+    public static int getRequiredBitsValueOrder(int numValues) {
+        return (int) (Math.floor(Math.log(factorial(numValues))/Math.log(2)));
+    }
+    public static int getRequiredBitsOperations(int numValues) {
+        return 2*(numValues)-2;
     }
     public static long[] compressExpressionSet (ExpressionSet toCompress) {
 
@@ -206,7 +214,7 @@ public class ExpressionCompression {
         int[] requiredBits= REQUIRED_BITS(numValues);
         byte[] valueOrder = intToValueOrder((int) (compressedExpression & ((1L<<requiredBits[0])-1)), numValues);
         byte[] operations = intToOperations((int) (compressedExpression >>> requiredBits[0] & ((1L<<requiredBits[1])-1)), numValues-1);
-        boolean[] order = intToOrder((int) (compressedExpression >>> (requiredBits[0]+requiredBits[1]) & ((1L<<requiredBits[2])-1)), 2*numValues-4);
+        boolean[] order = intToOrder((int) (compressedExpression >>> (requiredBits[0]+requiredBits[1]) & ((1L<<requiredBits[2])-1)), getRequiredBitsOrder(numValues));
         //System.err.println("Compressed expression: "+toBinary(compressedExpression));
 
         //System.err.println("Decompressed value order: "+Arrays.toString(valueOrder));
@@ -218,19 +226,27 @@ public class ExpressionCompression {
 
     public static int orderToInt(boolean[] order) {
         int value = 0;
-        for (int i = 2; i < order.length-1; i++) { // the first two values and last value of order must be true true false in order to make a valid RPN expression.
+        for (int i = 2; i < order.length-2; i++) { // the first two values and last value of order must be true true false in order to make a valid RPN expression. The penultimate value is determined since there is alwayst the same number of true and falses in the middle.
             value |= (order[i] ? 1 : 0) << (i-2);
         }
         return value;
     }
-    public static boolean[] intToOrder(int value, int length) { //160
-        boolean[] order = new boolean[length+3];
+    public static boolean[] intToOrder(int value, int length) { 
+        if (length==0) {
+            return new boolean[]{true,true,false};
+        }
+        boolean[] order = new boolean[length+4];
         order[0]= true; // the first two values and last value of order must be true true false in order to make a valid RPN expression.
         order[1]= true;
-        order[length+2]= false;
+        order[length+3]= false;
+        int numberOfTrues = 0;
         for (int i = 0; i < length; i++) {
             order[i+2] = ((value >> i) & 1) == 1;
+            if (order[i+2]) {
+                numberOfTrues++;
+            }
         }
+        order[length+2] = numberOfTrues!=(length+1)/2;
         return order;
     }
     public static int operationsToInt(byte[] operations) {

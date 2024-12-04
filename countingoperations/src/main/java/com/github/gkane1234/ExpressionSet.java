@@ -342,7 +342,7 @@ public class ExpressionSet implements Serializable{
         // Use a thread-safe list to store expressions
         long startTime = System.currentTimeMillis();
 
-        int decile = numExpressions/10;
+        int decile = Math.max(numExpressions/10, 1);
         Expression[] expressions = new Expression[numExpressions];
         try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(filename),BUFFER_SIZE);
              ObjectInputStream ois = new ObjectInputStream(bis)) {
@@ -376,21 +376,26 @@ public class ExpressionSet implements Serializable{
 
     
     public static EvaluatedExpressionSet evaluate(ExpressionSet expressionSet, double[] values, int rounding) {
-        final int numThreads = 10;
+        final int numThreads = 20;
 
         EvaluatedExpression[] evaluatedExpressions = new EvaluatedExpression[expressionSet.getNumExpressions()];
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         List<Future<Void>> futures = new ArrayList<>();
+        AtomicInteger evaluatedExpressionsCount = new AtomicInteger(0);
 
         int chunkSize = (expressionSet.getNumExpressions() + numThreads - 1) / numThreads;
         for (int t = 0; t < numThreads; t++) {
             final int start = t * chunkSize;
             final int end = Math.min(start + chunkSize, expressionSet.getNumExpressions());
-            
+            final int decile = expressionSet.getNumExpressions()/10;
             futures.add(executor.submit(() -> {
                 for (int i = start; i < end; i++) {
                     double value = expressionSet.get(i).evaluateWithValues(values, rounding);
                     evaluatedExpressions[i] = new EvaluatedExpression(expressionSet.get(i), values, value);
+                    evaluatedExpressionsCount.incrementAndGet();
+                    if (evaluatedExpressionsCount.get()%decile==0) {
+                        System.out.println("Evaluated "+evaluatedExpressionsCount.get()+" expressions");
+                    }
                 }
                 return null;
             }));
@@ -409,7 +414,7 @@ public class ExpressionSet implements Serializable{
         return new EvaluatedExpressionSet(evaluatedExpressions);
     }
 
-    public static SolutionList findSolutions(ExpressionSet expressionSet, double[] values, double goal, int rounding, int maxSolutions) {
+    public static SolutionList findSolutions(ExpressionSet expressionSet, double[] values, double goal, int rounding, int maxSolutions, boolean verbose) {
         final int numThreads = 10;
         long startTime = System.currentTimeMillis();
         SolutionList solutions = new SolutionList(values,goal);
@@ -418,6 +423,9 @@ public class ExpressionSet implements Serializable{
         
         final Object lock = new Object(); // For thread-safe list access
         AtomicInteger solutionsFound = new AtomicInteger(0);
+        final int decile = expressionSet.getNumExpressions()/10;
+
+        AtomicInteger evaluatedExpressionsCount = new AtomicInteger(0);
 
         int chunkSize = (expressionSet.numExpressions - 1) / numThreads+1;
         for (int t = 0; t < numThreads; t++) {
@@ -428,12 +436,19 @@ public class ExpressionSet implements Serializable{
                 for (int i = start; i < end && solutionsFound.get() < maxSolutions; i++) {
                     
                     double value = expressionSet.get(i).evaluateWithValues(values, rounding);
+                    if (verbose) {
+                        evaluatedExpressionsCount.incrementAndGet();
+                        if (evaluatedExpressionsCount.get()%decile==0) {
+                            System.out.println("Evaluated "+evaluatedExpressionsCount.get()+" expressions");
+                        }
+                    }
                     if (Solver.equal(value, goal)) { // Check if value equals goal
                         
                         synchronized(lock) {
                             if (solutionsFound.get() < maxSolutions) {
                                 solutions.addEvaluatedExpression(new EvaluatedExpression(expressionSet.get(i), values, value));
                                 solutionsFound.incrementAndGet();
+
                             }
                         }
                     }

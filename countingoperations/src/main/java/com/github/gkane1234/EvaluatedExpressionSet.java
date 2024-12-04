@@ -77,6 +77,10 @@ public class EvaluatedExpressionSet {
         Returns a string representation of the solution set.
         @return a <code>String</code> representing the solution set.
     */
+
+    public EvaluatedExpression getEvaluatedExpression(int index) {
+        return (EvaluatedExpression) this.evaluatedExpressionSet.toArray()[index];
+    }
     @Override
     public String toString() {
         String toReturn = "{";

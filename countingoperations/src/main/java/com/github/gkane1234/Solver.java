@@ -35,7 +35,7 @@ public class Solver extends SwingWorker<Void,String>{
         if (load) {
             try {
                 if (verbose) {
-                    System.err.println("Loading expression set...");
+                    broadcast("Loading expression set...");
                 }
                 if (compressed) {
                     solverSet = CompressedExpressionSet.loadCompressed(numValues);
@@ -44,9 +44,9 @@ public class Solver extends SwingWorker<Void,String>{
                 }
             } catch (FileNotFoundException e) {
                 if (verbose) {
-                    System.err.println("File not found, creating instead...");
+                    broadcast("File not found, creating instead...");
                 }
-                solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose,compressed).getExpressionSet();
+                solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose,compressed,true).getExpressionSet();
                 if (compressed) {
                     CompressedExpressionSet compressedExpressionSet = new CompressedExpressionSet(ExpressionCompression.compressExpressionSet(solverSet),solverSet.getNumExpressions(),numValues);
                     CompressedExpressionSet.saveCompressed(compressedExpressionSet,verbose);
@@ -58,10 +58,10 @@ public class Solver extends SwingWorker<Void,String>{
             }
             
         } else {
-            solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose,compressed).getExpressionSet();
+            solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose,compressed,true).getExpressionSet();
         }
         if (verbose) {
-            System.err.println("Loaded "+solverSet.getNumExpressions()+" expressions.");
+            broadcast("Loaded "+solverSet.getNumExpressions()+" expressions.");
         }
         this.numValues=numValues;
     }
@@ -84,7 +84,7 @@ public class Solver extends SwingWorker<Void,String>{
         @return a <code>SolutionSet</code> representing the solutions found.
     */
     public SolutionList findAllSolutions(double[] values, double goal,int maxSolutions) {
-        return ExpressionSet.findSolutions(solverSet, values, goal, Solver.ROUNDING, maxSolutions);
+        return ExpressionSet.findSolutions(solverSet, values, goal, Solver.ROUNDING, maxSolutions, verbose);
     }
     /**
         Finds all solutions for a given goal using a set of values.
@@ -109,7 +109,7 @@ public class Solver extends SwingWorker<Void,String>{
     public EvaluatedExpression findFirstSolution(double[] values, double goal) {
         for (int i=0;i<solverSet.getNumExpressions();i++) {
             if (verbose&&i%100000==0) {
-                publish("Evaluating expression "+i+" of "+solverSet.getNumExpressions());
+                broadcast("Evaluating expression "+i+" of "+solverSet.getNumExpressions());
             }
             if (Solver.equal(solverSet.get(i).evaluateWithValues(values,Solver.ROUNDING),goal)) {
                 return new EvaluatedExpression(solverSet.get(i),values,goal);
@@ -143,9 +143,10 @@ public class Solver extends SwingWorker<Void,String>{
             attempts++;
             int[] nextAttempt = r.ints(numValues, valueRange[0], valueRange[1]).toArray();
             if (this.verbose) {
-                publish("Attempting: "+attempts);
-                publish(" ");
-                publish(Arrays.toString(nextAttempt));
+
+                broadcast("Attempting: "+attempts);
+                broadcast(" ");
+                broadcast(Arrays.toString(nextAttempt));
             }
     
             SolutionList solutions = findAllSolutions(nextAttempt, goal,solutionRange[1]+1);
@@ -259,16 +260,23 @@ public class Solver extends SwingWorker<Void,String>{
             boolean inside  = intSet.contains(i);
             i+=delta;
             if (output) {
-                    publish(String.valueOf(i));
-                    publish(" ");
-                    publish(outputs.get(i).toString());
+                broadcast(String.valueOf(i));
+                broadcast(" ");
+                broadcast(outputs.get(i).toString());
 
-                }
+            }
                 
             
             if (inside!=works) {
                 return i;
             }
+        }
+    }
+    public void broadcast(String message) {
+        if (this.applet!=null) {
+            publish(message);
+        } else {
+            System.out.println(message);
         }
     }
     /**
