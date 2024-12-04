@@ -12,7 +12,7 @@ public class ExpressionCompression {
         int requiredBitsValueOrder = (int) (Math.ceil(Math.log(factorial(numValues))/Math.log(2)));
         int requiredBitsOperations = 2*(numValues)-2;
         int requiredBitsOrder = Math.max(2*(numValues)-4, 0);
-        int requiredBitsTotal = requiredBitsValueOrder+requiredBitsOperations+requiredBitsOrder;
+        int requiredBitsTotal = Math.max(requiredBitsValueOrder+requiredBitsOperations+requiredBitsOrder, 1);
         return new int[]{requiredBitsValueOrder,
                         requiredBitsOperations,
                         requiredBitsOrder,
@@ -57,8 +57,13 @@ public class ExpressionCompression {
          * 
          * 
          */
+
+        if (toCompress.numValues==1) {
+            return new long[]{0};
+        }
         int numValues = toCompress.getNumValues();
         int[] requiredBits= REQUIRED_BITS(numValues);
+
         long[] compressedExpressions = new long[(toCompress.getNumExpressions()*requiredBits[3]+63)/64];
 
         int currentLong = 0;
@@ -87,15 +92,24 @@ public class ExpressionCompression {
     public static String toBinary(long value) {
         return String.format("%64s", Long.toBinaryString(value)).replace(' ', '0');
     }
+    public static ExpressionSet decompressExpressionSet (CompressedExpressionSet compressedExpressionSet, boolean verbose) {
+        return decompressExpressionSet(compressedExpressionSet.getCompressedExpressions(), compressedExpressionSet.getNumExpressions(), compressedExpressionSet.getNumValues(), verbose);
+    }
     public static ExpressionSet decompressExpressionSet (long[] compressedExpressions, int numCompressedExpressions, int numValues, boolean verbose) {
         long startTime = System.currentTimeMillis();
+
+
         if (verbose) {
 
             System.err.println("Decompressing expression set with "+numCompressedExpressions+" expressions");
         }
+
+        if (numValues==1) {
+            return new ExpressionSet(new Expression[]{decompressExpression(compressedExpressions[0], numValues)}, 1, numValues);
+        }
         
         int[] requiredBits= REQUIRED_BITS(numValues);
-        int decile = numCompressedExpressions/10;
+        int decile = Math.max(1, numCompressedExpressions/10);
 
         List<Expression> decompressedExpressions = new ArrayList<>();
         
@@ -108,7 +122,9 @@ public class ExpressionCompression {
         }
         Expression[] decompressedExpressionsArray = new Expression[decompressedExpressions.size()];
         long endTime = System.currentTimeMillis();
-        System.out.println("Decompressed expression set in "+(endTime-startTime)/1000.0+" seconds");
+        if (verbose) {
+            System.out.println("Decompressed expression set in "+(endTime-startTime)/1000.0+" seconds");
+        }
         return new ExpressionSet(decompressedExpressions.toArray(decompressedExpressionsArray),numCompressedExpressions, numValues);
 
             
@@ -132,6 +148,23 @@ public class ExpressionCompression {
         return compressedExpression;
     }
 
+    public static void setCompressedExpression(long[] compressedExpressions, int index, int expressionSize, long value) {
+        int bitIndex = index*expressionSize;
+        int longIndex = bitIndex/64;
+        int bitOffset = bitIndex%64;
+        //System.err.println("Setting compressed expression at index "+index+" with value "+toBinary(value)+" and bit offset "+bitOffset+" and long index "+longIndex);
+        compressedExpressions[longIndex] |= (value << bitOffset);
+        if (64<expressionSize+bitOffset) {
+            int bitsUsed = 64-bitOffset;
+            bitOffset = expressionSize+bitOffset-64;
+            compressedExpressions[longIndex+1] |= (value >>> bitsUsed);
+        }
+    }
+
+    public static int getCompressedExpressionSetSize(int numExpressions, int expressionSize) {
+        return (numExpressions*expressionSize+63)/64;
+    }
+
     /**
      * Compresses an expression into a long.
      * The compressed expression is a single long that stores the value order, operations, and order
@@ -142,6 +175,11 @@ public class ExpressionCompression {
      */
     public static long compressExpression (Expression toCompress) {
         int numValues = toCompress.valueOrder.length;
+
+        if (numValues==1) {
+            return 0L;
+        }
+        
         int[] requiredBits= REQUIRED_BITS(numValues);
         int compressedValueOrder = valueOrderToInt(toCompress.valueOrder);
         int compressedOperations = operationsToInt(toCompress.operations);
@@ -153,6 +191,7 @@ public class ExpressionCompression {
         //System.err.println("Compressed operations: "+toBinary(compressedOperations));
         //System.err.println("Compressed order: "+toBinary(compressedOrder));
         //System.err.println("Required bits: "+Arrays.toString(requiredBits));
+        
         long compressedExpression = 
             ((compressedValueOrder & ((1L << requiredBits[0]) - 1)) |
             ((long) compressedOperations << requiredBits[0]) |  //casting to long to prevent overflow in n=7 case
@@ -161,6 +200,9 @@ public class ExpressionCompression {
         return compressedExpression;
     }
     public static Expression decompressExpression (long compressedExpression, int numValues) {
+        if (numValues==1) {
+            return new Expression(new byte[]{0},new byte[]{},new boolean[] {true});
+        }
         int[] requiredBits= REQUIRED_BITS(numValues);
         byte[] valueOrder = intToValueOrder((int) (compressedExpression & ((1L<<requiredBits[0])-1)), numValues);
         byte[] operations = intToOperations((int) (compressedExpression >>> requiredBits[0] & ((1L<<requiredBits[1])-1)), numValues-1);

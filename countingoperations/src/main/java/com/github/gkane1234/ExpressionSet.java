@@ -31,19 +31,19 @@ public class ExpressionSet implements Serializable{
     private static final long serialVersionUID = 1L;
     protected static final int BUFFER_SIZE = 1024*1024;
 
-    private static final String FILE_PATH = "counting_operations/outputs/";
+    protected static final String FILE_PATH = "counting_operations/outputs/";
 
-    private static final int THREASHOLD = 2;
+    protected static final int THREASHOLD = 2;
     
     private Expression[] expressions;
-    private int numExpressions;
-    private int numValues;
-    private int rounding;
+    protected int numExpressions;
+    protected int numValues;
+    protected int rounding;
     private TFloatHashSet[] seen;
     //private CustomFloatHashSet[] seen;
     //private TCustomHashSet<Float>[] seen;
-    private double[][] truncators;
-    private int numTruncators;
+    protected double[][] truncators;
+    protected int numTruncators;
 
     /**
         Constructor for an ExpressionSet.
@@ -163,12 +163,18 @@ public class ExpressionSet implements Serializable{
         return Arrays.toString(expressions);
     }
     /**
-        Changes the value order of the expressions in the set.
-        @param valueOrder: a <code>byte[]</code> representing the new value order.
-        @return an <code>ExpressionSet</code> representing the set with the new value order.
+        Creates a new ExpressionSet with a new value order without modifying the original set.
+        @param expressionSet: an <code>ExpressionSet</code> to create a new set from.
+        @param value_order: a <code>byte[]</code> representing the new value order.
     */
-    public ExpressionSet changeValueOrders(byte[] valueOrder) {
-        return changeValueOrder(this, valueOrder, this.numTruncators);
+    public ExpressionSet changeValueOrder(byte[] valueOrder) throws IllegalStateException {
+        
+        Expression[] newExpressions = new Expression[this.numExpressions];
+        for (int i=0;i<this.numExpressions;i++) {
+            newExpressions[i]=this.get(i).changeValueOrder(valueOrder);
+            
+        }
+        return new ExpressionSet(newExpressions,this.numExpressions,this.numValues,this.rounding,0); // 0 truncators since we dont want them to be initialized where this is used
     }
     /**
         Adds an expression to the set if it is not equivalent to any of the expressions already in the set.
@@ -218,6 +224,10 @@ public class ExpressionSet implements Serializable{
         return false;
     }
 
+    public void cleanup() {
+        this.clearSeen();
+    }
+
     /**
         Saves an expression set to a file.
         @param expressionSet: an <code>ExpressionSet</code> to save.
@@ -242,7 +252,9 @@ public class ExpressionSet implements Serializable{
 
     public static void saveCompressed(ExpressionSet expressionSet, boolean verbose) {
         final int BUFFER_SIZE = 1024*1024;
-        System.err.println("Compressing expression set");
+        if (verbose) {
+            System.err.println("Compressing expression set");
+        }
         long[] compressedExpressions = ExpressionCompression.compressExpressionSet(expressionSet);
         String filename = getCompressedFilename(expressionSet.numValues);
         try (BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(filename),BUFFER_SIZE);
@@ -259,13 +271,17 @@ public class ExpressionSet implements Serializable{
 
     public static ExpressionSet loadCompressed(String filename, int numValues,int numExpressions, boolean verbose) throws FileNotFoundException {
         long startTime = System.currentTimeMillis();
-        System.err.println(filename);
+        if (verbose) {  
+            System.err.println(filename);
+        }
 
         try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(filename),BUFFER_SIZE);
             ObjectInputStream ois = new ObjectInputStream(bis)) {
             long[] compressedExpressions = (long[]) ois.readObject();
             long endTime = System.currentTimeMillis();
-            System.out.println("Loaded compressed expression set in "+(endTime-startTime)/1000.0+" seconds");
+            if (verbose) {
+                System.out.println("Loaded compressed expression set in "+(endTime-startTime)/1000.0+" seconds");
+            }
             return ExpressionCompression.decompressExpressionSet(compressedExpressions,numExpressions,numValues,verbose);
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
@@ -350,28 +366,15 @@ public class ExpressionSet implements Serializable{
             throw new FileNotFoundException("File not found: " + filename);
         }
         long endTime = System.currentTimeMillis();
-        System.out.println("Loaded "+numExpressions+" expressions in "+((endTime-startTime)/1000.0)+" seconds");
+        if (verbose) {
+            System.out.println("Loaded "+numExpressions+" expressions in "+((endTime-startTime)/1000.0)+" seconds");
+        }
         return new ExpressionSet(expressions, numExpressions, numValues, 0, 0);
     }
 
 
 
-    /**
-        Creates a new ExpressionSet with a new value order.
-        @param expressionSet: an <code>ExpressionSet</code> to create a new set from.
-        @param value_order: a <code>byte[]</code> representing the new value order.
-        @param numTruncators: the number of truncators to use.
-        @return an <code>ExpressionSet</code> representing the new set.
-    */
-    public static ExpressionSet changeValueOrder(ExpressionSet expressionSet, byte[] value_order, int numTruncators) throws IllegalStateException {
-        
-        Expression[] newExpressions = new Expression[expressionSet.expressions.length];
-        for (int i=0;i<expressionSet.numExpressions;i++) {
-            newExpressions[i]=expressionSet.expressions[i].changeValueOrder(value_order);
-            
-        }
-        return new ExpressionSet(newExpressions, expressionSet.numExpressions,expressionSet.numValues, expressionSet.rounding, numTruncators);
-    }
+    
     public static EvaluatedExpressionSet evaluate(ExpressionSet expressionSet, double[] values, int rounding) {
         final int numThreads = 10;
 
@@ -450,7 +453,6 @@ public class ExpressionSet implements Serializable{
 
         executor.shutdown();
         long endTime = System.currentTimeMillis();
-        System.out.println("Found "+solutions.getNumSolutions()+" solutions in "+(endTime-startTime)/1000.0+" seconds");
         return solutions;
     }
 }

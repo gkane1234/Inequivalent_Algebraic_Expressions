@@ -11,8 +11,18 @@ public class CountingMain {
         System.out.println("Total Memory: " + Runtime.getRuntime().totalMemory());
         System.out.println("Free Memory: " + Runtime.getRuntime().freeMemory());
         //testCompressionOfEntireExpressionSet(7);
+        //testExpressionCompression(true,true);
 
+        long startTime = System.currentTimeMillis();
 
+        ExpressionDynamic expressionDynamic = new ExpressionDynamic(7, 5, 20, null, false, true, true);
+
+        ExpressionSet expressionSet = expressionDynamic.getExpressionSet();
+
+        long endTime = System.currentTimeMillis();
+        System.out.println("Time taken: "+(endTime-startTime)/1000.0+" seconds");
+
+        //System.err.println(expressionSetDB);
         
 
         //TODO: find ways to reduce memory strain:
@@ -37,7 +47,6 @@ public class CountingMain {
         
         //Solver s = new Solver(numValues,true,true,null);
 
-        inputValuesForGoalAndSolutions(7, null);
 
 
         //s.findFirstInRange(values, range, false, true);
@@ -218,15 +227,15 @@ public class CountingMain {
             System.err.println("Expression sets are not equal");
         }
     }
-    public static void testExpressionCompression() {
-        for (int i = 2; i <= 7; i++) {
+    public static void testExpressionCompression(boolean load, boolean compressed) {
+        for (int i = 1; i <= 7; i++) {
             System.err.println("Testing "+i);
-            testExpressionCompressionOneValue(i, 100);
+            testExpressionCompressionOneValue(i, 100, load, compressed);
         }
     }
-    public static void testExpressionCompressionOneValue(int numValues,int numExpressions) {
+    public static void testExpressionCompressionOneValue(int numValues,int numExpressions, boolean load, boolean compressed) {
 
-        Solver s = new Solver(numValues, false, true, null);
+        Solver s = new Solver(numValues, false, load, null, compressed);
         Random r = new Random();
 
        
@@ -253,7 +262,7 @@ public class CountingMain {
         
         long[] compressedExpressionSet = ExpressionCompression.compressExpressionSet(e);
 
-        ExpressionSet decompressedExpressionSet = ExpressionCompression.decompressExpressionSet(compressedExpressionSet, numExpressions,numValues);
+        ExpressionSet decompressedExpressionSet = ExpressionCompression.decompressExpressionSet(compressedExpressionSet, numExpressions,numValues,true);
         if (!e.equals(decompressedExpressionSet)) {
             System.err.println("Expression sets are not equal");
         }

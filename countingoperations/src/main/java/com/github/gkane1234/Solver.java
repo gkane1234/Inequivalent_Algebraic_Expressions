@@ -46,7 +46,7 @@ public class Solver extends SwingWorker<Void,String>{
                 if (verbose) {
                     System.err.println("File not found, creating instead...");
                 }
-                solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose).getExpressionSet();
+                solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose,compressed).getExpressionSet();
                 if (compressed) {
                     CompressedExpressionSet compressedExpressionSet = new CompressedExpressionSet(ExpressionCompression.compressExpressionSet(solverSet),solverSet.getNumExpressions(),numValues);
                     CompressedExpressionSet.saveCompressed(compressedExpressionSet,verbose);
@@ -58,7 +58,7 @@ public class Solver extends SwingWorker<Void,String>{
             }
             
         } else {
-            solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose).getExpressionSet();
+            solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose,compressed).getExpressionSet();
         }
         if (verbose) {
             System.err.println("Loaded "+solverSet.getNumExpressions()+" expressions.");

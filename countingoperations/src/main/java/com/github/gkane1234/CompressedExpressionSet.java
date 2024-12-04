@@ -12,10 +12,10 @@ import java.io.ObjectOutputStream;
 
 
 public class CompressedExpressionSet extends ExpressionSet {
-    private final int expressionSize;
-    private long[] compressedExpressions;
-    private int numExpressions;
-    private int numValues;
+    protected final int expressionSize;
+    protected long[] compressedExpressions;
+    protected int numExpressions;
+    protected int numValues;
 
     public CompressedExpressionSet(long[] compressedExpressions, int numExpressions, int numValues) {
         super(null, numExpressions, numValues);
@@ -24,6 +24,10 @@ public class CompressedExpressionSet extends ExpressionSet {
         this.numValues = numValues;
         this.expressionSize = ExpressionCompression.REQUIRED_BITS(numValues)[3];
     }
+    public CompressedExpressionSet(int numValues) {
+        this(new long[ExpressionCompression.getCompressedExpressionSetSize(getMaximumSize(numValues), ExpressionCompression.REQUIRED_BITS(numValues)[3])], 0, numValues);
+    }
+
     @Override
     public Expression[] getExpressions() {
         return ExpressionCompression.decompressExpressionSet(compressedExpressions, numExpressions, numValues, true).getExpressions();
@@ -46,11 +50,12 @@ public class CompressedExpressionSet extends ExpressionSet {
 
     @Override
     public boolean add(Expression expression) {
-        throw new UnsupportedOperationException("Cannot add to a compressed expression set");
+        throw new UnsupportedOperationException("Cannot check for equivalence in a compressed expression set, use forceAdd or ExpressionSetDB instead");
     }
     @Override
     public void forceAdd(Expression expression) {
-        throw new UnsupportedOperationException("Cannot add to a compressed expression set");
+        ExpressionCompression.setCompressedExpression(compressedExpressions, numExpressions, expressionSize, ExpressionCompression.compressExpression(expression));
+        numExpressions++;
     }
 
 
