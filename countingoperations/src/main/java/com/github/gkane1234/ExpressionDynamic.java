@@ -47,14 +47,14 @@ public class ExpressionDynamic {
         this( 4,5, 3,null, false,true,true);
     }
 
-    private ExpressionSet tryToLoadExpressionSet(int numValues, int rounding, int numTruncators, boolean useDB, boolean useExisting) {
+    private ExpressionList tryToLoadExpressionList(int numValues, int rounding, int numTruncators, boolean useDB, boolean useExisting) {
         if (useExisting) {
 
             try {
                 if (useDB) {
-                    return CompressedExpressionSet.loadCompressed(numValues);
+                    return CompressedExpressionList.loadCompressed(numValues);
                 } else {
-                    return ExpressionSet.loadCompressed(numValues);
+                    return ExpressionList.loadCompressed(numValues);
                 }
             } catch (FileNotFoundException e) {
             }
@@ -81,27 +81,27 @@ public class ExpressionDynamic {
         Then we add all of these expressions to the expression set, which removed duplicates using expressionSet.add()
         @return an <code>ExpressionSet</code> representing the expression set.
     */
-    public ExpressionSet getExpressionSet() {
+    public ExpressionList getExpressionList() {
         
         // Initialize expression lists
 
-        List<ExpressionSet> expressionLists = new ArrayList<>();
+        List<ExpressionList> expressionLists = new ArrayList<>();
 
 
         
         //load the first expression set if possible
-        ExpressionSet firstExpressionSet = tryToLoadExpressionSet(1, rounding, numTruncators, useDB,useExisting);
-        if (firstExpressionSet.getNumExpressions() == 0) {
-            firstExpressionSet.forceAdd(new Expression(new byte[]{0},new byte[]{},new boolean[] {true})); //Base case
+        ExpressionList firstExpressionList = tryToLoadExpressionList(1, rounding, numTruncators, useDB,useExisting);
+        if (firstExpressionList.getNumExpressions() == 0) {
+            firstExpressionList.forceAdd(new Expression(new byte[]{0},new byte[]{},new boolean[] {true})); //Base case
         }
 
-        expressionLists.add(firstExpressionSet);
+        expressionLists.add(firstExpressionList);
 
         for (int currentNumValues = 2; currentNumValues <= numValues; currentNumValues++) {
             
             boolean createNew = !useExisting||(currentNumValues==numValues);
-            ExpressionSet currentExpressionSet = tryToLoadExpressionSet(currentNumValues, rounding, numTruncators, useDB,!createNew);
-            if (currentExpressionSet.getNumExpressions() == 0) {
+            ExpressionList currentExpressionList = tryToLoadExpressionList(currentNumValues, rounding, numTruncators, useDB,!createNew);
+            if (currentExpressionList.getNumExpressions() == 0) {
                 System.out.println("Generating expressions for "+currentNumValues+" values");
                 System.out.println("Number of expressions: "+String.format("%,d",expressionLists.get(currentNumValues-2).getNumExpressions()));
                 //currentExpressionSet.startAdding();
@@ -114,15 +114,15 @@ public class ExpressionDynamic {
                 for (int i = start; i > end; i--) {
                     System.out.println("Generating combinations for "+currentNumValues+" values, group size of "+i);
                     counter=0;
-                    ExpressionSet leftExpressionSet;
-                    ExpressionSet rightExpressionSet;
+                    ExpressionList leftExpressionList;
+                    ExpressionList rightExpressionList;
 
                     if (useDB) {
-                        leftExpressionSet = ExpressionCompression.decompressExpressionSet((CompressedExpressionSet) expressionLists.get(i - 1),verbose);
-                        rightExpressionSet = ExpressionCompression.decompressExpressionSet((CompressedExpressionSet) expressionLists.get(currentNumValues - i - 1),verbose);
+                        leftExpressionList = ExpressionCompression.decompressExpressionList((CompressedExpressionList) expressionLists.get(i - 1),verbose);
+                        rightExpressionList = ExpressionCompression.decompressExpressionList((CompressedExpressionList) expressionLists.get(currentNumValues - i - 1),verbose);
                     } else {
-                        leftExpressionSet = expressionLists.get(i - 1);
-                        rightExpressionSet = expressionLists.get(currentNumValues - i - 1);
+                        leftExpressionList = expressionLists.get(i - 1);
+                        rightExpressionList = expressionLists.get(currentNumValues - i - 1);
                     }
 
                     TByteHashSet[] combinations = generateCombinations(currentNumValues, i);
@@ -137,10 +137,10 @@ public class ExpressionDynamic {
                             }
                         }
 
-                        addProductOfExpressionSets(
-                            currentExpressionSet,
-                            leftExpressionSet.changeValueOrder(toArray(combination)),
-                            rightExpressionSet.changeValueOrder(toArray(remainder))
+                        addProductOfExpressionLists(
+                            currentExpressionList,
+                            leftExpressionList.changeValueOrder(toArray(combination)),
+                            rightExpressionList.changeValueOrder(toArray(remainder))
                         );
                            
                         
@@ -154,11 +154,11 @@ public class ExpressionDynamic {
                 } else {
                     System.out.println("Successfully loaded expressions for "+currentNumValues+" values");
                 }
-                System.out.println("Number of expressions: "+String.format("%,d",currentExpressionSet.getNumExpressions()));
+                System.out.println("Number of expressions: "+String.format("%,d",currentExpressionList.getNumExpressions()));
                 
 
-                currentExpressionSet.cleanup();
-                expressionLists.add(currentExpressionSet);
+                currentExpressionList.cleanup();
+                expressionLists.add(currentExpressionList);
         }
 
         return expressionLists.get(expressionLists.size() - 1);
@@ -186,13 +186,13 @@ public class ExpressionDynamic {
         @param expressionSet2: an <code>ExpressionSet</code> representing the second set to combine.
         @return an <code>Expression[]</code> representing the combined set.
     */
-    public void addProductOfExpressionSets(ExpressionSet expressionSet, ExpressionSet expressionSet1, ExpressionSet expressionSet2) {
+    public void addProductOfExpressionLists(ExpressionList expressionSet, ExpressionList expressionList1, ExpressionList expressionList2) {
         
-        int newValues = expressionSet1.getNumExpressions()*expressionSet2.getNumExpressions()*Operation.getNumOperationOrderings();
-        for (int i = 0; i < expressionSet1.getNumExpressions(); i++) {
-            for (int j = 0; j < expressionSet2.getNumExpressions(); j++) {
-                Expression expression1 = expressionSet1.get(i);
-                Expression expression2 = expressionSet2.get(j);
+        int newValues = expressionList1.getNumExpressions()*expressionList2.getNumExpressions()*Operation.getNumOperationOrderings();
+        for (int i = 0; i < expressionList1.getNumExpressions(); i++) {
+            for (int j = 0; j < expressionList2.getNumExpressions(); j++) {
+                Expression expression1 = expressionList1.get(i);
+                Expression expression2 = expressionList2.get(j);
                 Expression[] combinedExpressions = Expression.createCombinedExpressions(expression1, expression2);
                 for (int k = 0; k< combinedExpressions.length; k++) {
                     boolean added = expressionSet.add(combinedExpressions[k]);

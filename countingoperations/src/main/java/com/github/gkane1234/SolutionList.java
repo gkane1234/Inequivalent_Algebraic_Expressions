@@ -1,6 +1,6 @@
 package com.github.gkane1234;
 
-public class SolutionList extends EvaluatedExpressionSet{
+public class SolutionList extends EvaluatedExpressionList{
 
     private double goal;
 
@@ -13,9 +13,9 @@ public class SolutionList extends EvaluatedExpressionSet{
         this.goal=goal;
     }
 
-    public SolutionList(EvaluatedExpressionSet evaluatedExpressionSet, double goal) {
-        this(evaluatedExpressionSet.getValues(),goal);
-        for (EvaluatedExpression evaluatedExpression : evaluatedExpressionSet.getEvaluatedExpressionList()) {
+    public SolutionList(EvaluatedExpressionList evaluatedExpressionList, double goal) {
+        this(evaluatedExpressionList.getValues(),goal);
+        for (EvaluatedExpression evaluatedExpression : evaluatedExpressionList.getEvaluatedExpressionList()) {
             this.addEvaluatedExpression(evaluatedExpression);
         }
     }

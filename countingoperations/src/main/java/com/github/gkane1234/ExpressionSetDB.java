@@ -15,10 +15,11 @@ import org.rocksdb.RocksDBException;
     by using a number of tester lists of values, each list being called a truncator.
 
 */
-public class ExpressionSetDB extends CompressedExpressionSet{
+public class ExpressionSetDB extends CompressedExpressionList{
     private RocksFloatHashSet[] seen;
-    //private CustomFloatHashSet[] seen;
-    //private TCustomHashSet<Float>[] seen;
+    private int rounding;
+    private int numTruncators;
+    private double[][] truncators;
 
     /**
         Constructor for an ExpressionSet.
@@ -29,7 +30,7 @@ public class ExpressionSetDB extends CompressedExpressionSet{
 
 
     public ExpressionSetDB(int numValues, int rounding, int numTruncators) {
-        this(new long[ExpressionCompression.getCompressedExpressionSetSize(getMaximumSize(numValues),ExpressionCompression.REQUIRED_BITS(numValues)[3])],0,numValues,rounding,numTruncators);
+        this(new long[ExpressionCompression.getCompressedExpressionListSize(getMaximumSize(numValues),ExpressionCompression.REQUIRED_BITS(numValues)[3])],0,numValues,rounding,numTruncators);
     }
     /**
         Constructor for an ExpressionSet.
@@ -66,9 +67,9 @@ public class ExpressionSetDB extends CompressedExpressionSet{
                 //seen[i]=new TCustomHashSet<>(strategy);
                 double[] truncator = new double[numValues];
                 for (int j = 0; j < numValues; j++) {
-                    truncator[j] = 2*random.nextDouble()*maxTruncatorValue-maxTruncatorValue; // have answers be well mixed in the range of all possible floats to aid in hashing
-                    }
-                    truncators[i]=truncator;
+                    truncator[j] = 2*random.nextDouble()*maxTruncatorValue-maxTruncatorValue;
+                }
+                truncators[i]=truncator;
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -113,7 +114,7 @@ public class ExpressionSetDB extends CompressedExpressionSet{
         @return an <code>Expression[]</code> representing all the expressions in the set.
     */
     public Expression[] getExpressions() {
-        return ExpressionCompression.decompressExpressionSet(compressedExpressions, numExpressions, numValues, false).getExpressions();
+        return ExpressionCompression.decompressExpressionList(compressedExpressions, numExpressions, numValues, false).getExpressions();
     }
     public int getNumExpressions() {
         return this.numExpressions;
@@ -143,7 +144,7 @@ public class ExpressionSetDB extends CompressedExpressionSet{
 
     */
     @Override
-    public ExpressionSet changeValueOrder(byte[] valueOrder) throws IllegalStateException {
+    public ExpressionList changeValueOrder(byte[] valueOrder) throws IllegalStateException {
         throw new IllegalStateException("A compressed expression cannot be changed to a new value order");
     }
     /**
@@ -207,14 +208,14 @@ public class ExpressionSetDB extends CompressedExpressionSet{
         @param numTruncators: the number of truncators to use.
         @return an <code>ExpressionSet</code> representing the new set.
     */
-    public static ExpressionSetDB changeValueOrder(ExpressionSetDB expressionSet, byte[] value_order, int numTruncators) throws IllegalStateException {
+    public static ExpressionSetDB changeValueOrder(ExpressionSetDB expressionSet, byte[] valueOrder, int numTruncators) throws IllegalStateException {
         
         Expression[] newExpressions = new Expression[expressionSet.getNumExpressions()];
         for (int i=0;i<expressionSet.getNumExpressions();i++) {
-            newExpressions[i]=expressionSet.get(i).changeValueOrder(value_order);
+            newExpressions[i]=expressionSet.get(i).changeValueOrder(valueOrder);
         }
 
-        long[] compressedExpressions = ExpressionCompression.compressExpressionSet(new ExpressionSet(newExpressions, newExpressions.length, expressionSet.getNumValues()));
+        long[] compressedExpressions = ExpressionCompression.compressExpressionList(new ExpressionList(newExpressions, newExpressions.length, expressionSet.getNumValues()));
 
 
         return new ExpressionSetDB(compressedExpressions, newExpressions.length,expressionSet.getNumValues(), expressionSet.rounding, numTruncators);

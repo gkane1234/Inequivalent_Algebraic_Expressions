@@ -17,7 +17,7 @@ public class Solver extends SwingWorker<Void,String>{
     private static final double TOLERANCE = 1e-5;
 
     private static final int MAX_SOLUTIONS = 200;
-    ExpressionSet solverSet;
+    ExpressionList solverSet;
     private int numValues;
     private boolean verbose;
 
@@ -35,22 +35,22 @@ public class Solver extends SwingWorker<Void,String>{
         if (load) {
             try {
                 if (verbose) {
-                    broadcast("Loading expression set...");
+                    broadcast("Loading expression list...");
                 }
                 if (compressed) {
-                    solverSet = CompressedExpressionSet.loadCompressed(numValues);
+                    solverSet = CompressedExpressionList.loadCompressed(numValues);
                 } else {
-                    solverSet = ExpressionSet.loadCompressed(numValues);
+                    solverSet = ExpressionList.loadCompressed(numValues);
                 }
             } catch (FileNotFoundException e) {
                 if (verbose) {
                     broadcast("File not found, creating instead...");
                 }
-                solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose,compressed,true).getExpressionSet();
+                solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose,compressed,true).getExpressionList();
                 if (compressed) {
-                    CompressedExpressionSet compressedExpressionSet = new CompressedExpressionSet(ExpressionCompression.compressExpressionSet(solverSet),solverSet.getNumExpressions(),numValues);
-                    CompressedExpressionSet.saveCompressed(compressedExpressionSet,verbose);
-                    solverSet = compressedExpressionSet;
+                    CompressedExpressionList compressedExpressionList = new CompressedExpressionList(ExpressionCompression.compressExpressionList(solverSet),solverSet.getNumExpressions(),numValues);
+                    CompressedExpressionList.saveCompressed(compressedExpressionList,verbose);
+                    solverSet = compressedExpressionList;
                 } else {
                     ExpressionSet.saveCompressed(solverSet,verbose);
                 }
@@ -58,7 +58,7 @@ public class Solver extends SwingWorker<Void,String>{
             }
             
         } else {
-            solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose,compressed,true).getExpressionSet();
+            solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose,compressed,true).getExpressionList();
         }
         if (verbose) {
             broadcast("Loaded "+solverSet.getNumExpressions()+" expressions.");
@@ -240,8 +240,8 @@ public class Solver extends SwingWorker<Void,String>{
         TIntObjectHashMap <EvaluatedExpression> outputs = new TIntObjectHashMap<>();
 
 
-        EvaluatedExpressionSet evaluatedExpressionSet = ExpressionSet.evaluate(solverSet, values, Solver.ROUNDING);
-        for (EvaluatedExpression evaluatedExpression : evaluatedExpressionSet.getEvaluatedExpressionList()) {
+        EvaluatedExpressionList evaluatedExpressionList = ExpressionList.evaluate(solverSet, values, Solver.ROUNDING);
+        for (EvaluatedExpression evaluatedExpression : evaluatedExpressionList.getEvaluatedExpressionList()) {
             double answer = evaluatedExpression.getValue();
             if (Solver.equal(answer, Math.round(answer))) {
                 int wholeNumberAnswer = (int)Math.round(answer);

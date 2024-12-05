@@ -5,20 +5,20 @@ import java.util.HashSet;
 /**
     This class is used to represent a list of solutions.
 */
-public class EvaluatedExpressionSet {
+public class EvaluatedExpressionList {
     private HashSet<EvaluatedExpression> evaluatedExpressionSet;
     private double[] values;
     /**
         Constructor for the EvaluatedExpressionSet class.
         @param EvaluatedExpressionList: an <code>EvaluatedExpression[]</code> representing the list of solutions to add to the set.
     */
-    public EvaluatedExpressionSet(EvaluatedExpression[] EvaluatedExpressionList) {
+    public EvaluatedExpressionList(EvaluatedExpression[] evaluatedExpressionList) {
         this.evaluatedExpressionSet=new HashSet<>();
-        for (EvaluatedExpression evaluatedExpression : EvaluatedExpressionList) {
+        for (EvaluatedExpression evaluatedExpression : evaluatedExpressionList) {
             this.evaluatedExpressionSet.add(evaluatedExpression);
         }
-        if (EvaluatedExpressionList.length > 0) {
-            values = EvaluatedExpressionList[0].getValues();
+        if (evaluatedExpressionList.length > 0) {
+            values = evaluatedExpressionList[0].getValues();
         } else {
             values = null;
         }
@@ -28,7 +28,7 @@ public class EvaluatedExpressionSet {
         Constructor for the EvaluatedExpressionList class.
         @param values: a <code>double[]</code> representing the values used in the equation.
     */
-    public EvaluatedExpressionSet(double[] values) {
+    public EvaluatedExpressionList(double[] values) {
         this.evaluatedExpressionSet=new HashSet<>();
         this.values=values;
     }
@@ -36,7 +36,7 @@ public class EvaluatedExpressionSet {
         Constructor for the EvaluatedExpressionList class.
         @param values: a <code>int[]</code> representing the values used in the equation.
     */
-    public EvaluatedExpressionSet(int[] values) {
+    public EvaluatedExpressionList(int[] values) {
         double[] doubleValues = new double[values.length];
         for (int i=0;i<values.length;i++) {
             doubleValues[i]=values[i];

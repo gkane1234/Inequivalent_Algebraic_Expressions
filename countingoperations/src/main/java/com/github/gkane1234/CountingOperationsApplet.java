@@ -148,7 +148,7 @@ public class CountingOperationsApplet implements SolverUpdateListener {
         
         new Thread(() -> {
             try {
-                solver = new Solver(numValues, true, true, this);
+                solver = new Solver(numValues, true, true, this,true);
 
                 javax.swing.SwingUtilities.invokeLater(() -> 
                     solutionsArea.append("\nSolver loaded successfully!")
