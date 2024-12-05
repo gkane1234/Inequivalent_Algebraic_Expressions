@@ -21,10 +21,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /*
-    A data structure that stores inequivalent expressions.
-
-    To be added to the set, an expression is found if it is not equivalent to any of the expressions already in the set,
-    by using a number of tester lists of values, each list being called a truncator.
+    A data structure that stores expressions.
 
 */
 public class ExpressionList implements Serializable{
@@ -40,12 +37,10 @@ public class ExpressionList implements Serializable{
     protected static final int THREASHOLD = 2;
 
     /**
-        Constructor for an ExpressionSet.
+        Constructor for an ExpressionList.
         @param expressions: expressions that have already been found to be inequivalent.
         @param numExpressions: an <code>int</code> representing the number of expressions that are in expressions. (This can differ from the length of expressions)
         @param numValues: an <code>int</code> representing the number of values in the expressions.
-        @param rounding: an <code>int</code> representing the number of decimal places to round to.
-        @param numTruncators: an <code>int</code> representing the number of truncators to use.
     */
     
     public ExpressionList(Expression[] expressions,int numExpressions,int numValues) {
@@ -55,9 +50,10 @@ public class ExpressionList implements Serializable{
         this.numValues = numValues;
 
     }
-
+    /**
+        The blank constructor.
+    */
     protected ExpressionList() {
-
     }
 
     /**
@@ -77,11 +73,11 @@ public class ExpressionList implements Serializable{
     }
     /**
         Returns the expression at a given index.
-        @param i: an <code>int</code> representing the index of the expression to return.
+        @param index: an <code>int</code> representing the index of the expression to return.
         @return an <code>Expression</code> representing the expression at the given index.
     */
-    public Expression get(int i) {
-        return this.expressions[i];
+    public Expression get(int index) {
+        return this.expressions[index];
     }
     /**
         Returns the number of expressions in the set.
@@ -125,6 +121,12 @@ public class ExpressionList implements Serializable{
         return new ExpressionList(newExpressions,this.numExpressions,this.numValues); // 0 truncators since we dont want them to be initialized where this is used
     }
 
+    /**
+        Adds an expression to the list.
+        Does the same thing as forceAdd.
+        @param expression: an <code>Expression</code> to add to the list.
+        @return a <code>boolean</code> representing whether the expression was added.
+    */
     public boolean add(Expression expression) {
         if (this.numExpressions==this.expressions.length) {
             throw new IllegalStateException("ExpressionList is full");
@@ -147,15 +149,12 @@ public class ExpressionList implements Serializable{
 
     @Override
     public boolean equals(Object o) {
-        //System.err.println(this);
-        //System.err.println(o);
         if (o instanceof ExpressionList) {
             ExpressionList e = (ExpressionList)o;
             if (this.numExpressions!=e.numExpressions) {
                 return false;
             }
             for (int i = 0; i < this.numExpressions; i++) {
-                //System.out.println(this.expressions[i]+" "+e.expressions[i]);
                 if (!this.expressions[i].equals(e.expressions[i])) {
                     return false;
                 }
@@ -165,7 +164,10 @@ public class ExpressionList implements Serializable{
         }
         return false;
     }
-
+    /**
+        Cleans up the expression list.
+        TODO: instead of using a cleanup method, we can just convert the set objects to thier lists.
+    */
     public void cleanup() {
         // nothing to do
     }
@@ -196,7 +198,7 @@ public class ExpressionList implements Serializable{
         if (verbose) {
             System.err.println("Compressing expression set");
         }
-        long[] compressedExpressions = ExpressionCompression.compressExpressionList(expressionList);
+        CompressedExpressionList compressedExpressions = ExpressionCompression.compressExpressionList(expressionList);
         String filename = getCompressedFilename(expressionList.numValues);
         try (BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(filename),BUFFER_SIZE);
             ObjectOutputStream oos = new ObjectOutputStream(bos)) {
@@ -411,4 +413,6 @@ public class ExpressionList implements Serializable{
         long endTime = System.currentTimeMillis();
         return solutions;
     }
+
+
 }

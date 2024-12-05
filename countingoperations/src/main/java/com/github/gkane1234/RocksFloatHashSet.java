@@ -6,11 +6,18 @@ import org.rocksdb.RocksDBException;
 
 import java.nio.ByteBuffer;
 
+/**
+    A hash set implementation using RocksDB.
+*/
 public class RocksFloatHashSet {
     private final RocksDB db;
     private final String dbPath;
 
-    // Constructor to initialize RocksDB
+    /**
+        Constructor for a RocksFloatHashSet.
+        @param dbPath: a <code>String</code> representing the path to the RocksDB database.
+        @throws RocksDBException: if there is an error opening the database.
+    */
     public RocksFloatHashSet(String dbPath) throws RocksDBException {
         RocksDB.loadLibrary();
         Options options = new Options().setCreateIfMissing(true);
@@ -18,7 +25,11 @@ public class RocksFloatHashSet {
         this.dbPath = dbPath;
     }
 
-    // Method to add a float value
+    /**
+        Adds a float value to the set if it is not already present.
+        @param value: a <code>float</code> representing the value to add.
+        @return a <code>boolean</code> representing whether the value was added.
+    */
     public boolean add(float value) {
         byte[] key = toBytes(value);
         try {
@@ -33,7 +44,11 @@ public class RocksFloatHashSet {
         }
     }
 
-    // Method to check if a float value exists
+    /**
+        Checks if a float value exists in the set.
+        @param value: a <code>float</code> representing the value to check.
+        @return a <code>boolean</code> representing whether the value exists in the set.
+    */
     public boolean contains(float value) {
         byte[] key = toBytes(value);
         try {
@@ -44,7 +59,10 @@ public class RocksFloatHashSet {
         }
     }
 
-    // Method to remove a float value
+    /**
+        Removes a float value from the set.
+        @param value: a <code>float</code> representing the value to remove.
+    */
     public void remove(float value) {
         byte[] key = toBytes(value);
         try {
@@ -54,24 +72,27 @@ public class RocksFloatHashSet {
         }
     }
 
-    // Helper to convert float to bytes
+    /**
+        Converts a float to bytes.
+        @param value: a <code>float</code> representing the value to convert.
+        @return a <code>byte[]</code> representing the bytes of the float.
+    */
     private byte[] toBytes(float value) {
         ByteBuffer buffer = ByteBuffer.allocate(Float.BYTES);
         buffer.putFloat(value);
         return buffer.array();
     }
 
-    // Helper to convert bytes to float (optional, for debugging or other use cases)
-    private float fromBytes(byte[] bytes) {
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        return buffer.getFloat();
-    }
-
-    // Close the database
+    /**
+        Closes the RocksDB database.
+    */
     public void close() {
         db.close();
     }
 
+    /**
+        Deletes the RocksDB database and all of its files.
+    */
     public void delete() {
         Options options = new Options();
         System.err.println("Deleting database at "+dbPath);

@@ -1,8 +1,5 @@
 package com.github.gkane1234;
 import java.util.Random;
-import java.util.Arrays;
-import org.rocksdb.RocksDBException;
-
 
 
 
@@ -14,6 +11,10 @@ import org.rocksdb.RocksDBException;
     To be added to the set, an expression is found if it is not equivalent to any of the expressions already in the set,
     by using a number of tester lists of values, each list being called a truncator.
 
+    This class uses a RocksDB database to store the seen values for each truncator.
+
+    This class only deals with compressed expressions.
+
 */
 public class ExpressionSetDB extends CompressedExpressionList{
     private RocksFloatHashSet[] seen;
@@ -22,25 +23,22 @@ public class ExpressionSetDB extends CompressedExpressionList{
     private double[][] truncators;
 
     /**
-        Constructor for an ExpressionSet.
+        Constructor for an ExpressionSetDB.
         @param numValues: an <code>int</code> representing the number of values in the expressions.
         @param rounding: an <code>int</code> representing the number of decimal places to round to.
         @param numTruncators: an <code>int</code> representing the number of truncators to use.
     */
-
-
     public ExpressionSetDB(int numValues, int rounding, int numTruncators) {
         this(new long[ExpressionCompression.getCompressedExpressionListSize(getMaximumSize(numValues),ExpressionCompression.REQUIRED_BITS(numValues)[3])],0,numValues,rounding,numTruncators);
     }
     /**
-        Constructor for an ExpressionSet.
-        @param expressions: expressions that have already been found to be inequivalent.
+        Constructor for an ExpressionSetDB.
+        @param compressedExpressions: the compressed expressions to use.
         @param numExpressions: an <code>int</code> representing the number of expressions that are in expressions. (This can differ from the length of expressions)
         @param numValues: an <code>int</code> representing the number of values in the expressions.
         @param rounding: an <code>int</code> representing the number of decimal places to round to.
         @param numTruncators: an <code>int</code> representing the number of truncators to use.
     */
-    
     public ExpressionSetDB(long[] compressedExpressions, int numExpressions, int numValues, int rounding, int numTruncators) {
         super(compressedExpressions, numExpressions, numValues);
         
@@ -76,59 +74,20 @@ public class ExpressionSetDB extends CompressedExpressionList{
         }
 
     }
-
     /**
-        Clears the seen hashset to free up memory.
+        Constructor for an ExpressionSetDB.
+        @param compressedExpressionList: the compressed expressions to use.
+        @param numTruncators: an <code>int</code> representing the number of truncators to use.
     */
-    public void clearSeen() {
-        this.seen=null;
-        this.truncators=null;
-        this.numTruncators=0;
-
-    }
-    /**
-        Returns the maximum number of expressions that can be in the set.
-        @param numValues: an <code>int</code> representing the number of values in the expressions.
-        @return an <code>int</code> representing the maximum number of expressions that can be in the set.
-    */
-    public static int getMaximumSize(int numValues) {
-        return Counter.run(numValues).intValue();
-    }
-    /**
-        Returns the number of values in the expressions.
-        @return an <code>int</code> representing the number of values in the expressions.
-    */
-    public int getNumValues() {
-        return this.numValues;
+    public ExpressionSetDB(CompressedExpressionList compressedExpressionList, int numTruncators) {
+        super(compressedExpressionList);
+        this.numTruncators = numTruncators;
+        this.seen = new RocksFloatHashSet[numTruncators];
+        this.truncators = new double[numTruncators][numValues];
     }
 
-    /**
-        Returns the number of expressions in the set.
-        @return an <code>int</code> representing the number of expressions in the set.
-    */
-    public int size() {
-        return this.numExpressions;
-    }
-    /**
-        Returns all the expressions in the set.
-        @return an <code>Expression[]</code> representing all the expressions in the set.
-    */
-    public Expression[] getExpressions() {
-        return ExpressionCompression.decompressExpressionList(compressedExpressions, numExpressions, numValues, false).getExpressions();
-    }
-    public int getNumExpressions() {
-        return this.numExpressions;
-    }
     
 
-    /**
-        Returns a string representation of the set.
-        @return a <code>String</code> representing the set.
-    */
-    @Override
-    public String toString() {
-        return Arrays.toString(getExpressions());
-    }
     @Override
     public void cleanup() {
         for (int i = 0; i < this.numTruncators; i++) {
@@ -167,57 +126,5 @@ public class ExpressionSetDB extends CompressedExpressionList{
             numExpressions++;
         }
         return toAdd;
-    }
-    /**
-        Adds an expression to the set without checking if it is equivalent to any of the expressions already in the set.
-        @param expression: an <code>Expression</code> to add to the set.
-    */
-    public void forceAdd(Expression expression) {
-        ExpressionCompression.setCompressedExpression(compressedExpressions, numExpressions, expressionSize, ExpressionCompression.compressExpression(expression));
-        numExpressions++;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        //System.err.println(this);
-        //System.err.println(o);
-        if (o instanceof ExpressionSetDB) {
-            ExpressionSetDB e = (ExpressionSetDB)o;
-            if (this.numExpressions!=e.numExpressions) {
-                return false;
-            }
-            for (int i = 0; i < this.numExpressions; i++) {
-                //System.out.println(this.expressions[i]+" "+e.expressions[i]);
-                if (!this.get(i).equals(e.get(i))) {
-                    return false;
-                }
-
-            }
-            return true;
-        }
-        return false;
-    }
-
-
-
-
-    /**
-        Creates a new ExpressionSet with a new value order.
-        @param expressionSet: an <code>ExpressionSet</code> to create a new set from.
-        @param value_order: a <code>byte[]</code> representing the new value order.
-        @param numTruncators: the number of truncators to use.
-        @return an <code>ExpressionSet</code> representing the new set.
-    */
-    public static ExpressionSetDB changeValueOrder(ExpressionSetDB expressionSet, byte[] valueOrder, int numTruncators) throws IllegalStateException {
-        
-        Expression[] newExpressions = new Expression[expressionSet.getNumExpressions()];
-        for (int i=0;i<expressionSet.getNumExpressions();i++) {
-            newExpressions[i]=expressionSet.get(i).changeValueOrder(valueOrder);
-        }
-
-        long[] compressedExpressions = ExpressionCompression.compressExpressionList(new ExpressionList(newExpressions, newExpressions.length, expressionSet.getNumValues()));
-
-
-        return new ExpressionSetDB(compressedExpressions, newExpressions.length,expressionSet.getNumValues(), expressionSet.rounding, numTruncators);
     }
 }

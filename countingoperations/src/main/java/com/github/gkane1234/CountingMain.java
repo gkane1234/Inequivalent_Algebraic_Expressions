@@ -288,9 +288,9 @@ public class CountingMain {
         System.err.println("Compressing expression set");
         ExpressionSet e = new ExpressionSet(expressions,expressions.length,numValues);
         
-        long[] compressedExpressionList = ExpressionCompression.compressExpressionList(e);
+        CompressedExpressionList compressedExpressionList = ExpressionCompression.compressExpressionList(e);
 
-        ExpressionList decompressedExpressionList = ExpressionCompression.decompressExpressionList(compressedExpressionList, numExpressions,numValues,true);
+        ExpressionList decompressedExpressionList = compressedExpressionList.decompress();
         if (!e.equals(decompressedExpressionList)) {
             System.err.println("Expression lists are not equal");
         }

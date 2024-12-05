@@ -10,6 +10,8 @@ import java.util.Arrays;
 import javax.swing.SwingWorker;
 /**
     Solver class for finding solutions for a given goal using a set of values.
+
+    It is a SwingWorker in order to allow for progress updates when used in the applet.
 */
 public class Solver extends SwingWorker<Void,String>{
     private static final int NUM_TRUNCATORS = 20;
@@ -131,7 +133,13 @@ public class Solver extends SwingWorker<Void,String>{
         return findFirstSolution(doubleValues, goal);
 
     }
-
+    /**
+        Finds a random set of values that can be used to make a given goal.
+        @param goal: a <code>double</code> representing the goal to find solutions for.
+        @param valueRange: an <code>int[]</code> representing the range of values to use.
+        @param solutionRange: an <code>int[]</code> representing the range of solutions to find.
+        @return a <code>SolutionList</code> representing the solutions found.
+    */
     public SolutionList findSolvableValues(double goal, int[] valueRange, int[] solutionRange) throws Exception {
         final int MAX_ATTEMPTS = 1000;
         Random r = new Random();
@@ -160,7 +168,7 @@ public class Solver extends SwingWorker<Void,String>{
     }
 
     /**
-        Finds a random set of values that can be used to make a given goal.
+        Finds a list of random sets of values that can be used to make a given goal.
         @param numSolutions: an <code>int</code> representing the number of solutions to find.
         @param goal: a <code>double</code> representing the goal to find solutions for.
         @param valueRange: an <code>int[]</code> representing the range of values to use.
