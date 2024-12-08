@@ -1,15 +1,20 @@
 package com.github.gkane1234;
 
-import java.util.Arrays;
-import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CountingOperationsApplet implements SolverUpdateListener {
+    private static final String SAVE_FILE_PATH = "counting_operations/outputs/saved_solutions/";
     private Solver solver;
     private SolutionList currentSolutions;
+    
+    private List<SolutionList> savedSolutionLists;
+    private SolutionWriter savedSolutionWriter;
 
     private javax.swing.JTextField goalField;
     private javax.swing.JTextField[] valueFields;
     private javax.swing.JTextArea solutionsArea;
+    private javax.swing.JTextArea debugArea;
     private javax.swing.JComboBox<Integer> numValuesCombo;
     private javax.swing.JPanel valuesPanel;
     private javax.swing.JComboBox<String> modeCombo;
@@ -19,12 +24,20 @@ public class CountingOperationsApplet implements SolverUpdateListener {
     private javax.swing.JTextField minSolutionsField;
     private javax.swing.JTextField maxSolutionsField;
     private javax.swing.JButton findButton;
-    
+    private javax.swing.JButton saveButton;
+    private javax.swing.JButton addToSavedButton;
+    private javax.swing.JButton clearSavedButton;
     public CountingOperationsApplet() {
         System.out.println("Max Memory: " + Runtime.getRuntime().maxMemory());
         System.out.println("Total Memory: " + Runtime.getRuntime().totalMemory());
         System.out.println("Free Memory: " + Runtime.getRuntime().freeMemory());
+        createJFrame();
 
+        savedSolutionLists = new ArrayList<>();
+        savedSolutionWriter = null;
+    }
+
+    private void createJFrame() {
         javax.swing.JFrame frame = new javax.swing.JFrame("Expression Solver");
         frame.setDefaultCloseOperation(javax.swing.JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new java.awt.BorderLayout());
@@ -100,19 +113,41 @@ public class CountingOperationsApplet implements SolverUpdateListener {
         showButton.addActionListener(e -> showSolutions());
         buttonPanel.add(showButton);
         
+        addToSavedButton = new javax.swing.JButton("Add List of Solutions to Saved");
+        addToSavedButton.addActionListener(e -> addToSaved());
+        buttonPanel.add(addToSavedButton);
+
+        clearSavedButton = new javax.swing.JButton("Clear Saved");
+        clearSavedButton.addActionListener(e -> clearSaved());
+        buttonPanel.add(clearSavedButton);
+
+        saveButton = new javax.swing.JButton("Save Solutions to File");
+        saveButton.addActionListener(e -> saveSolutions());
+        buttonPanel.add(saveButton);
+
+
         mainPanel.add(buttonPanel, java.awt.BorderLayout.SOUTH);
         
         frame.add(mainPanel, java.awt.BorderLayout.NORTH);
         
+        // Create split pane for solutions and debug areas
+        javax.swing.JSplitPane splitPane = new javax.swing.JSplitPane(javax.swing.JSplitPane.VERTICAL_SPLIT);
+        
         solutionsArea = new javax.swing.JTextArea();
         solutionsArea.setEditable(false);
-        frame.add(new javax.swing.JScrollPane(solutionsArea), java.awt.BorderLayout.CENTER);
+        splitPane.setTopComponent(new javax.swing.JScrollPane(solutionsArea));
+        
+        debugArea = new javax.swing.JTextArea();
+        debugArea.setEditable(false);
+        splitPane.setBottomComponent(new javax.swing.JScrollPane(debugArea));
+        
+        splitPane.setResizeWeight(0.7); // Give 70% space to solutions area by default
+        
+        frame.add(splitPane, java.awt.BorderLayout.CENTER);
         
         frame.setSize(600, 500);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
-
-        
     }
     
     private void updateMode() {
@@ -144,27 +179,27 @@ public class CountingOperationsApplet implements SolverUpdateListener {
     
     private void loadSolver() {
         int numValues = (Integer)numValuesCombo.getSelectedItem();
-        solutionsArea.setText("Loading solver with " + numValues + " values...\n");
+        broadcast("Loading solver with " + numValues + " values...");
         
         new Thread(() -> {
             try {
                 solver = new Solver(numValues, true, true, this,true);
 
                 javax.swing.SwingUtilities.invokeLater(() -> 
-                    solutionsArea.append("\nSolver loaded successfully!")
+                    broadcast("\nSolver loaded successfully!")
                 );
             } catch (Exception ex) {
                 javax.swing.SwingUtilities.invokeLater(() ->
-                    solutionsArea.append("\nError loading solver: " + ex.getMessage())
+                    broadcast("\nError loading solver: " + ex.getMessage())
                 );
             }
         }).start();
     }
     
     private void findSolutions() {
-        if (solver == null) {
-            solutionsArea.setText("Please load the solver first!");
-            return;
+        if (solver == null||solver.getNumValues()!=(Integer)numValuesCombo.getSelectedItem()) {
+            broadcast("Solver for "+numValuesCombo.getSelectedItem()+" values not loaded! Loading solver...");
+            loadSolver();
         }
         
         try {
@@ -224,21 +259,51 @@ public class CountingOperationsApplet implements SolverUpdateListener {
         solutionsArea.setText(sb.toString());
     }
 
+    private void saveSolutions() {
+        if (savedSolutionLists.isEmpty()) {
+            solutionsArea.setText("Please find solutions first!");
+            return;
+        }
+        broadcast("Saving solutions to file...");
+        savedSolutionWriter = new SolutionWriter(SAVE_FILE_PATH, savedSolutionLists, true, true);
+        savedSolutionWriter.createFile();
+
+        broadcast("Saved solutions to file!");
+    }
+
+    private void addToSaved() {
+        if (currentSolutions == null) {
+            solutionsArea.setText("Please find solutions first!");
+            return;
+        }
+        broadcast("Adding solutions to saved list...");
+        savedSolutionLists.add(currentSolutions);
+        broadcast("Added solutions to saved list!");
+    }
+
+    private void clearSaved() {
+        broadcast("Clearing saved list...");
+        savedSolutionLists.clear();
+        broadcast("Saved list cleared!");
+    }
+
     @Override
     public void onSolverUpdate(String update) {
         javax.swing.SwingUtilities.invokeLater(() -> {
-            solutionsArea.append("\n" + update);
+            debugArea.append("\n" + update);
+        });
+    }
+
+    private void broadcast(String message) {
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            debugArea.append("\n" + message);
         });
     }
     
     public static void main(String[] args) {
-        
-
-        
-        /* 
+        //TODO: make a way to view saved solutions in applet, and make the gui better.
         javax.swing.SwingUtilities.invokeLater(() -> {
             new CountingOperationsApplet();
         });
-        */
     }
 }

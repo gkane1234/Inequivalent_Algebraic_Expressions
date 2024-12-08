@@ -1,4 +1,4 @@
-package com.github.gkane1234;
+package com.github.gkane1234.unused;
 import gnu.trove.strategy.HashingStrategy;
 
 // UNUSED

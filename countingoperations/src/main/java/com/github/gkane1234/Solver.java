@@ -50,7 +50,7 @@ public class Solver extends SwingWorker<Void,String>{
                 }
                 solverSet = new ExpressionDynamic(numValues,ROUNDING,NUM_TRUNCATORS,null,verbose,compressed,true).getExpressionList();
                 if (compressed) {
-                    CompressedExpressionList compressedExpressionList = new CompressedExpressionList(ExpressionCompression.compressExpressionList(solverSet),solverSet.getNumExpressions(),numValues);
+                    CompressedExpressionList compressedExpressionList = ExpressionCompression.compressExpressionList(solverSet);
                     CompressedExpressionList.saveCompressed(compressedExpressionList,verbose);
                     solverSet = compressedExpressionList;
                 } else {
@@ -78,6 +78,9 @@ public class Solver extends SwingWorker<Void,String>{
         for (String chunk : chunks) {
             applet.onSolverUpdate(chunk);
         }
+    }
+    public int getNumValues() {
+        return numValues;
     }
     /**
         Finds all solutions for a given goal using a set of values.
@@ -109,6 +112,7 @@ public class Solver extends SwingWorker<Void,String>{
         @return a <code>Solution</code> representing the first solution found.
     */
     public EvaluatedExpression findFirstSolution(double[] values, double goal) {
+        broadcast("Finding first solution for "+goal+" with values "+Arrays.toString(values));
         for (int i=0;i<solverSet.getNumExpressions();i++) {
             if (verbose&&i%100000==0) {
                 broadcast("Evaluating expression "+i+" of "+solverSet.getNumExpressions());
@@ -142,9 +146,12 @@ public class Solver extends SwingWorker<Void,String>{
     */
     public SolutionList findSolvableValues(double goal, int[] valueRange, int[] solutionRange) throws Exception {
         final int MAX_ATTEMPTS = 1000;
+        broadcast("Finding solvable values for "+goal+" with values in range "+Arrays.toString(valueRange)+" and solutions in range "+Arrays.toString(solutionRange)+" and "+MAX_ATTEMPTS+" attempts");
         Random r = new Random();
 
         int attempts = 0;
+
+        SolutionList solutions=null;
 
         while (attempts<MAX_ATTEMPTS) {
 
@@ -157,13 +164,14 @@ public class Solver extends SwingWorker<Void,String>{
                 broadcast(Arrays.toString(nextAttempt));
             }
     
-            SolutionList solutions = findAllSolutions(nextAttempt, goal,solutionRange[1]+1);
+            solutions = findAllSolutions(nextAttempt, goal,solutionRange[1]+1);
             
             if (solutionRange[0] <= solutions.getNumSolutions() && solutions.getNumSolutions() <= solutionRange[1]) {
+                broadcast("Constraints met with "+solutions.getNumSolutions()+" solutions.");
                 return solutions;
             }
         }
-
+        broadcast("Constraints not met within "+MAX_ATTEMPTS+" attempts." + solutions.getNumSolutions()+" solutions found.");
         throw new Exception("Constraints not met within "+MAX_ATTEMPTS+" attempts");
     }
 
@@ -176,10 +184,12 @@ public class Solver extends SwingWorker<Void,String>{
         @return a <code>List<SolutionList></code> representing the solutions found.
     */
     public List<SolutionList> findListOfSolvableValues(int numSolutions,double goal, int[] valueRange, int[] solutionRange) throws Exception {
-
+        broadcast("Finding "+numSolutions+" solvable values for "+goal+" with values in range "+Arrays.toString(valueRange)+" and solutions in range "+Arrays.toString(solutionRange));
         List<SolutionList> solvables = new ArrayList<>();
 
+
         while(solvables.size()<numSolutions) {
+            broadcast("Attempting: "+solvables.size());
             solvables.add(findSolvableValues(goal, valueRange, solutionRange));
         }
         return solvables; 

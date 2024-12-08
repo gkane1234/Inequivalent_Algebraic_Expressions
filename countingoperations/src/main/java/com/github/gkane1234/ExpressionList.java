@@ -316,13 +316,8 @@ public class ExpressionList implements Serializable{
     }
 
 
-
-    
-    public static EvaluatedExpressionList evaluate(ExpressionList expressionList, double[] values, int rounding) {
-        final int numThreads = 20;
-
+    public static EvaluatedExpressionList evaluate(ExpressionList expressionList, double[] values, int rounding, ExecutorService executor, int numThreads) {
         EvaluatedExpression[] evaluatedExpressions = new EvaluatedExpression[expressionList.getNumExpressions()];
-        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         List<Future<Void>> futures = new ArrayList<>();
         AtomicInteger evaluatedExpressionsCount = new AtomicInteger(0);
 
@@ -356,12 +351,20 @@ public class ExpressionList implements Serializable{
         executor.shutdown();
         return new EvaluatedExpressionList(evaluatedExpressions);
     }
+        
+    
+    public static EvaluatedExpressionList evaluate(ExpressionList expressionList, double[] values, int rounding) {
+        final int numThreads = 20;
 
-    public static SolutionList findSolutions(ExpressionList expressionList, double[] values, double goal, int rounding, int maxSolutions, boolean verbose) {
-        final int numThreads = 10;
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        return evaluate(expressionList, values, rounding, executor, numThreads);
+        
+    }
+
+    public static SolutionList findSolutions(ExpressionList expressionList, double[] values, double goal, int rounding, int maxSolutions, boolean verbose, ExecutorService executor, int numThreads) {
         long startTime = System.currentTimeMillis();
         SolutionList solutions = new SolutionList(values,goal);
-        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        
         List<Future<Void>> futures = new ArrayList<>();
         
         final Object lock = new Object(); // For thread-safe list access
@@ -411,8 +414,26 @@ public class ExpressionList implements Serializable{
 
         executor.shutdown();
         long endTime = System.currentTimeMillis();
+        if (verbose) {
+            System.out.println("Found "+solutions.getNumSolutions()+" solutions in "+(endTime-startTime)/1000.0+" seconds");
+        }
         return solutions;
     }
 
+    public static SolutionList findSolutions(ExpressionList expressionList, double[] values, double goal, int rounding, int maxSolutions, boolean verbose) {
+        final int numThreads = 10;
+        long startTime = System.currentTimeMillis();
+        if (verbose) {
+            System.out.println("Creating thread pool");
+        }
+        
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        if (verbose) {
+            System.out.println("Thread pool created in "+(System.currentTimeMillis()-startTime)+" milliseconds");
+            System.out.println("Finding solutions");
+        }
+        
+        return findSolutions(expressionList, values, goal, rounding, maxSolutions, verbose, executor, numThreads);
+    }
 
 }

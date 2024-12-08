@@ -20,11 +20,45 @@ public class SolutionWriter {
         @param allSolutions: a <code>List<SolutionSet></code> representing the solutions to write to the file.
         @param fullOutput: a <code>boolean</code> representing whether to write the full output or a single number representing the expression, and a single number representing the number of solutions.
     */
-    public SolutionWriter(String filePath,List<SolutionList> allSolutions,boolean fullOutput){
+    public SolutionWriter(String filePath,List<SolutionList> allSolutions,boolean fullOutput,boolean saved){
+        //TODO: make metadata for saved solutions from applet.
         this.filePath=filePath;
         this.allSolutions=allSolutions;
         this.fullOutput=fullOutput;
-        createMetadataAndName();
+        if (saved) {
+            createSavedMetadataAndName();
+        }
+        else {
+            createAllPossibleMetadataAndName();
+        }
+    }
+
+    public SolutionWriter() {
+    }
+
+    public void setDataAndCreateFile(String filePath,List<SolutionList> allSolutions,boolean fullOutput,boolean saved) {
+        this.filePath=filePath;
+        this.allSolutions=allSolutions;
+        this.fullOutput=fullOutput;
+        if (saved) {
+            createSavedMetadataAndName();
+        }
+        else {
+            createAllPossibleMetadataAndName();
+        }
+        createFile();
+    }
+
+    public void setDataAndCreateFile(List<SolutionList> allSolutions,boolean fullOutput,boolean saved) {
+        this.allSolutions=allSolutions;
+        this.fullOutput=fullOutput;
+        if (saved) {
+            createSavedMetadataAndName();
+        }
+        else {
+            createAllPossibleMetadataAndName();
+        }
+        createFile();
     }
 
     /**
@@ -68,7 +102,7 @@ public class SolutionWriter {
     /**
         Creates the metadata and name for the file.
     */
-    private void createMetadataAndName() {
+    private void createAllPossibleMetadataAndName() {
         String numValues = String.valueOf(allSolutions.get(0).getValues().length);
         String minValue = String.valueOf(allSolutions.get(0).getValues()[0]);
         String maxValue = String.valueOf(allSolutions.get(allSolutions.size()-1).getValues()[0]);
@@ -80,6 +114,14 @@ public class SolutionWriter {
         
         this.fileName = "ALL_POSSIBLE_"+numValues+"_Values_"+minValue+"_TO_"+maxValue+"_GOAL_"+goal+".csv";
         
+
+    }
+
+    private void createSavedMetadataAndName() {
+        String numLists = String.valueOf(allSolutions.size());
+        long time = System.currentTimeMillis();
+        this.metadata = null;
+        this.fileName = "SOLUTIONS_"+numLists+"_"+time+".csv";
 
     }
     /**
