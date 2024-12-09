@@ -30,6 +30,9 @@ public class Solver extends SwingWorker<Void,String>{
         Constructor for the Solver class.
         @param numValues: an <code>int</code> representing the number of values to use.
         @param verbose: a <code>boolean</code> representing whether to print verbose output.
+        @param load: a <code>boolean</code> representing whether to load the expression list from a file.
+        @param applet: a <code>CountingOperationsApplet</code> representing the applet to update, null if not in applet.
+        @param compressed: a <code>boolean</code> representing whether to use compressed expression lists.
     */
     Solver(int numValues,boolean verbose, boolean load, CountingOperationsApplet applet, boolean compressed){
         this.verbose = verbose;
@@ -224,7 +227,7 @@ public class Solver extends SwingWorker<Void,String>{
                 System.err.println(Arrays.toString(values));
             }
             if (findAllSolutions) {
-                nextSolutionList = findAllSolutions(values, goal,200);
+                nextSolutionList = findAllSolutions(values, goal,MAX_SOLUTIONS);
             } else {
                 EvaluatedExpression firstSolution = findFirstSolution(values, goal);
                 nextSolutionList = new SolutionList(values,goal);

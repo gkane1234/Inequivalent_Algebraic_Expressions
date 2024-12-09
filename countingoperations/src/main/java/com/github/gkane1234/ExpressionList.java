@@ -1,8 +1,7 @@
 package com.github.gkane1234;
-import java.util.Random;
 import java.util.Arrays;
 
-import gnu.trove.set.hash.TFloatHashSet;
+
 import java.io.Serializable;
 import java.io.ObjectOutputStream;
 import java.io.BufferedOutputStream;
@@ -35,6 +34,8 @@ public class ExpressionList implements Serializable{
     protected int numValues;
 
     protected static final int THREASHOLD = 2;
+
+    protected static final int DEFAULT_NUM_THREADS = 24;
 
     /**
         Constructor for an ExpressionList.
@@ -354,10 +355,9 @@ public class ExpressionList implements Serializable{
         
     
     public static EvaluatedExpressionList evaluate(ExpressionList expressionList, double[] values, int rounding) {
-        final int numThreads = 20;
 
-        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-        return evaluate(expressionList, values, rounding, executor, numThreads);
+        ExecutorService executor = Executors.newFixedThreadPool(DEFAULT_NUM_THREADS);
+        return evaluate(expressionList, values, rounding, executor, DEFAULT_NUM_THREADS);
         
     }
 
@@ -421,19 +421,18 @@ public class ExpressionList implements Serializable{
     }
 
     public static SolutionList findSolutions(ExpressionList expressionList, double[] values, double goal, int rounding, int maxSolutions, boolean verbose) {
-        final int numThreads = 10;
         long startTime = System.currentTimeMillis();
         if (verbose) {
             System.out.println("Creating thread pool");
         }
         
-        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        ExecutorService executor = Executors.newFixedThreadPool(DEFAULT_NUM_THREADS);
         if (verbose) {
             System.out.println("Thread pool created in "+(System.currentTimeMillis()-startTime)+" milliseconds");
             System.out.println("Finding solutions");
         }
         
-        return findSolutions(expressionList, values, goal, rounding, maxSolutions, verbose, executor, numThreads);
+        return findSolutions(expressionList, values, goal, rounding, maxSolutions, verbose, executor, DEFAULT_NUM_THREADS);
     }
 
 }

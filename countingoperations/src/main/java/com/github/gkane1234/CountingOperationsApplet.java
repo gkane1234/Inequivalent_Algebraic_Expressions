@@ -2,6 +2,7 @@ package com.github.gkane1234;
 
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.SwingWorker;
 
 public class CountingOperationsApplet implements SolverUpdateListener {
     private static final String SAVE_FILE_PATH = "counting_operations/outputs/saved_solutions/";
@@ -13,7 +14,10 @@ public class CountingOperationsApplet implements SolverUpdateListener {
 
     private javax.swing.JTextField goalField;
     private javax.swing.JTextField[] valueFields;
-    private javax.swing.JTextArea solutionsArea;
+    private javax.swing.JPanel solutionsPanel;
+    private javax.swing.JTextArea[] foundValueTextAreas;
+    private javax.swing.JPanel foundValuesPanel;
+    private javax.swing.JPanel findValuesPanel;
     private javax.swing.JTextArea debugArea;
     private javax.swing.JComboBox<Integer> numValuesCombo;
     private javax.swing.JPanel valuesPanel;
@@ -27,6 +31,11 @@ public class CountingOperationsApplet implements SolverUpdateListener {
     private javax.swing.JButton saveButton;
     private javax.swing.JButton addToSavedButton;
     private javax.swing.JButton clearSavedButton;
+    private javax.swing.JPanel solutionDisplayPanel;
+    private javax.swing.JTextArea solutionTextArea;
+    private javax.swing.JToggleButton toggleSolutionsButton;
+    private SolutionFinderWorker currentWorker;
+    
     public CountingOperationsApplet() {
         System.out.println("Max Memory: " + Runtime.getRuntime().maxMemory());
         System.out.println("Total Memory: " + Runtime.getRuntime().totalMemory());
@@ -46,29 +55,41 @@ public class CountingOperationsApplet implements SolverUpdateListener {
         mainPanel.setLayout(new java.awt.BorderLayout());
         
         javax.swing.JPanel topPanel = new javax.swing.JPanel();
-        topPanel.setLayout(new java.awt.GridLayout(4, 2));
+        topPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
         
-        topPanel.add(new javax.swing.JLabel("Mode:"));
+        javax.swing.JPanel modePanel = new javax.swing.JPanel();
+        modePanel.add(new javax.swing.JLabel("Mode:"));
         String[] modes = {"Specific Values", "Find Values"};
         modeCombo = new javax.swing.JComboBox<>(modes);
+        modeCombo.setPreferredSize(new java.awt.Dimension(150, 25));
         modeCombo.addActionListener(e -> updateMode());
-        topPanel.add(modeCombo);
+        modePanel.add(modeCombo);
+        topPanel.add(modePanel);
         
-        topPanel.add(new javax.swing.JLabel("Number of Values:"));
+        javax.swing.JPanel valuesCountPanel = new javax.swing.JPanel();
+        valuesCountPanel.add(new javax.swing.JLabel("Number of Values:"));
         Integer[] values = {2, 3, 4, 5, 6, 7};
         numValuesCombo = new javax.swing.JComboBox<>(values);
+        numValuesCombo.setPreferredSize(new java.awt.Dimension(80, 25));
         numValuesCombo.setSelectedItem(7);
-        numValuesCombo.addActionListener(e -> updateValueFields());
-        topPanel.add(numValuesCombo);
+        numValuesCombo.addActionListener(e -> {
+            updateValueFields((Integer)numValuesCombo.getSelectedItem(), valuesPanel, true);
+            updateValueFields((Integer)numValuesCombo.getSelectedItem(), foundValuesPanel, false);
+        });
+        valuesCountPanel.add(numValuesCombo);
+        topPanel.add(valuesCountPanel);
         
         javax.swing.JButton loadButton = new javax.swing.JButton("Load/Create Solver");
+        loadButton.setPreferredSize(new java.awt.Dimension(150, 25));
         loadButton.addActionListener(e -> loadSolver());
         topPanel.add(loadButton);
-        topPanel.add(new javax.swing.JLabel());
         
-        topPanel.add(new javax.swing.JLabel("Goal:"));
+        javax.swing.JPanel goalPanel = new javax.swing.JPanel();
+        goalPanel.add(new javax.swing.JLabel("Goal:"));
         goalField = new javax.swing.JTextField();
-        topPanel.add(goalField);
+        goalField.setPreferredSize(new java.awt.Dimension(100, 25));
+        goalPanel.add(goalField);
+        topPanel.add(goalPanel);
         
         mainPanel.add(topPanel, java.awt.BorderLayout.NORTH);
         
@@ -77,12 +98,17 @@ public class CountingOperationsApplet implements SolverUpdateListener {
         // Specific values panel
         valuesPanel = new javax.swing.JPanel();
         valuesPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Values"));
-        updateValueFields();
+        updateValueFields((Integer)numValuesCombo.getSelectedItem(), valuesPanel, true);
+        
+        // Found values panel
+        foundValuesPanel = new javax.swing.JPanel();
+        foundValuesPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Found Values"));
+        updateValueFields((Integer)numValuesCombo.getSelectedItem(), foundValuesPanel, false);
         
         // Find values panel
-        javax.swing.JPanel findValuesPanel = new javax.swing.JPanel();
+        findValuesPanel = new javax.swing.JPanel();
         findValuesPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Value Constraints"));
-        findValuesPanel.setLayout(new java.awt.GridLayout(4, 2));
+        findValuesPanel.setLayout(new java.awt.GridLayout(4, 2, 5, 5));
         
         findValuesPanel.add(new javax.swing.JLabel("Min Value:"));
         minValueField = new javax.swing.JTextField("1");
@@ -105,26 +131,43 @@ public class CountingOperationsApplet implements SolverUpdateListener {
         mainPanel.add(inputPanel, java.awt.BorderLayout.CENTER);
 
         javax.swing.JPanel buttonPanel = new javax.swing.JPanel();
+        buttonPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 10, 5));
+        
         findButton = new javax.swing.JButton("Find Solutions");
-        findButton.addActionListener(e -> findSolutions());
+        findButton.setPreferredSize(new java.awt.Dimension(120, 25));
+        findButton.addActionListener(e -> {
+            if (currentWorker != null && !currentWorker.isDone()) {
+                broadcast("Cancelling solution search...");
+                currentWorker.cancel(true);
+                findButton.setText(modeCombo.getSelectedItem().equals("Find Values") ? "Find Values" : "Find Solutions");
+            } else {
+                broadcast("Finding solutions...");
+                findButton.setText("Cancel");
+                currentWorker = new SolutionFinderWorker();
+                currentWorker.execute();
+            }
+        });
         buttonPanel.add(findButton);
         
-        javax.swing.JButton showButton = new javax.swing.JButton("Show Solutions");
-        showButton.addActionListener(e -> showSolutions());
-        buttonPanel.add(showButton);
+        toggleSolutionsButton = new javax.swing.JToggleButton("Show Solutions");
+
+        toggleSolutionsButton.addActionListener(e -> toggleSolutions());
+        buttonPanel.add(toggleSolutionsButton);
         
-        addToSavedButton = new javax.swing.JButton("Add List of Solutions to Saved");
+        addToSavedButton = new javax.swing.JButton("Add to Saved");
+
         addToSavedButton.addActionListener(e -> addToSaved());
         buttonPanel.add(addToSavedButton);
 
         clearSavedButton = new javax.swing.JButton("Clear Saved");
+
         clearSavedButton.addActionListener(e -> clearSaved());
         buttonPanel.add(clearSavedButton);
 
-        saveButton = new javax.swing.JButton("Save Solutions to File");
+        saveButton = new javax.swing.JButton("Save to File");
+
         saveButton.addActionListener(e -> saveSolutions());
         buttonPanel.add(saveButton);
-
 
         mainPanel.add(buttonPanel, java.awt.BorderLayout.SOUTH);
         
@@ -133,9 +176,22 @@ public class CountingOperationsApplet implements SolverUpdateListener {
         // Create split pane for solutions and debug areas
         javax.swing.JSplitPane splitPane = new javax.swing.JSplitPane(javax.swing.JSplitPane.VERTICAL_SPLIT);
         
-        solutionsArea = new javax.swing.JTextArea();
-        solutionsArea.setEditable(false);
-        splitPane.setTopComponent(new javax.swing.JScrollPane(solutionsArea));
+        // Solutions panel
+        solutionsPanel = new javax.swing.JPanel(new java.awt.BorderLayout());
+        solutionsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Solutions"));
+        
+        // Found values display
+        solutionsPanel.add(foundValuesPanel, java.awt.BorderLayout.NORTH);
+        
+        // Solution display panel (initially hidden)
+        solutionDisplayPanel = new javax.swing.JPanel(new java.awt.BorderLayout());
+        solutionTextArea = new javax.swing.JTextArea();
+        solutionTextArea.setEditable(false);
+        solutionDisplayPanel.add(new javax.swing.JScrollPane(solutionTextArea), java.awt.BorderLayout.CENTER);
+        solutionDisplayPanel.setVisible(false);
+        solutionsPanel.add(solutionDisplayPanel, java.awt.BorderLayout.CENTER);
+
+        splitPane.setTopComponent(solutionsPanel);
         
         debugArea = new javax.swing.JTextArea();
         debugArea.setEditable(false);
@@ -145,11 +201,10 @@ public class CountingOperationsApplet implements SolverUpdateListener {
         
         frame.add(splitPane, java.awt.BorderLayout.CENTER);
         
-        frame.setSize(600, 500);
+        frame.setSize(1000, 800);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
-    
     private void updateMode() {
         java.awt.CardLayout cl = (java.awt.CardLayout)(inputPanel.getLayout());
         cl.show(inputPanel, (String)modeCombo.getSelectedItem());
@@ -162,15 +217,26 @@ public class CountingOperationsApplet implements SolverUpdateListener {
         }
     }
     
-    private void updateValueFields() {
-        int numValues = (Integer)numValuesCombo.getSelectedItem();
-        valueFields = new javax.swing.JTextField[numValues];
+    private void updateValueFields(int numValues, javax.swing.JPanel valuesPanel, boolean editable) {
+        if (valuesPanel == this.valuesPanel) {
+            valueFields = new javax.swing.JTextField[numValues];
+        } else if (valuesPanel == foundValuesPanel) {
+            foundValueTextAreas = new javax.swing.JTextArea[numValues];
+        }
+        
         valuesPanel.removeAll();
         valuesPanel.setLayout(new java.awt.FlowLayout());
         
         for (int i = 0; i < numValues; i++) {
-            valueFields[i] = new javax.swing.JTextField(5);
-            valuesPanel.add(valueFields[i]);
+            if (valuesPanel == this.valuesPanel) {
+                valueFields[i] = new javax.swing.JTextField(5);
+                valueFields[i].setEditable(editable);
+                valuesPanel.add(valueFields[i]);
+            } else if (valuesPanel == foundValuesPanel) {
+                foundValueTextAreas[i] = new javax.swing.JTextArea(1, 5);
+                foundValueTextAreas[i].setEditable(editable);
+                valuesPanel.add(foundValueTextAreas[i]);
+            }
         }
         
         valuesPanel.revalidate();
@@ -195,73 +261,104 @@ public class CountingOperationsApplet implements SolverUpdateListener {
             }
         }).start();
     }
-    
-    private void findSolutions() {
-        if (solver == null||solver.getNumValues()!=(Integer)numValuesCombo.getSelectedItem()) {
-            broadcast("Solver for "+numValuesCombo.getSelectedItem()+" values not loaded! Loading solver...");
-            loadSolver();
-        }
-        
-        try {
+
+    private class SolutionFinderWorker extends SwingWorker<SolutionList, String> {
+        @Override
+        protected SolutionList doInBackground() throws Exception {
+            if (solver == null || solver.getNumValues() != (Integer)numValuesCombo.getSelectedItem()) {
+                publish("Solver for " + numValuesCombo.getSelectedItem() + " values not loaded! Loading solver...");
+                solver = new Solver((Integer)numValuesCombo.getSelectedItem(), true, true, CountingOperationsApplet.this, true);
+            }
+
             double goal = Double.parseDouble(goalField.getText());
-            
+            solutionDisplayPanel.setVisible(false);
+            toggleSolutionsButton.setSelected(false);
+
             if (modeCombo.getSelectedItem().equals("Specific Values")) {
                 double[] values = new double[valueFields.length];
                 for (int i = 0; i < valueFields.length; i++) {
                     values[i] = Double.parseDouble(valueFields[i].getText().trim());
                 }
-                currentSolutions = solver.findAllSolutions(values, goal,200);
-                solutionsArea.setText("Found " + currentSolutions.getNumSolutions() + " solutions!\nClick 'Show Solutions' to display them.");
+                return solver.findAllSolutions(values, goal, 200);
             } else {
                 int minValue = Integer.parseInt(minValueField.getText().trim());
                 int maxValue = Integer.parseInt(maxValueField.getText().trim());
                 int minSolutions = Integer.parseInt(minSolutionsField.getText().trim());
                 int maxSolutions = Integer.parseInt(maxSolutionsField.getText().trim());
                 
-                int valueRange[] = {minValue, maxValue};
-                int solutionRange[] = {minSolutions, maxSolutions};
-                try {
-                    currentSolutions = solver.findSolvableValues(goal, valueRange, solutionRange);
-                } catch (Exception ex) {
-                    solutionsArea.setText("Failed to find any solutions: " + ex.getMessage());
-                    return;
-                }
-                StringBuilder sb = new StringBuilder();
-                sb.append("Found values: ");
-                double[] foundValues = currentSolutions.getEvaluatedExpressionList().get(0).getValues();
-                for (int i = 0; i < foundValues.length; i++) {
-                    sb.append(foundValues[i]);
-                    if (i < foundValues.length - 1) {
-                        sb.append(", ");
-                    }
-                }
-                sb.append("\nClick 'Show Solutions' to display the solutions.");
-                solutionsArea.setText(sb.toString());
+                int[] valueRange = {minValue, maxValue};
+                int[] solutionRange = {minSolutions, maxSolutions};
+                return solver.findSolvableValues(goal, valueRange, solutionRange);
             }
-        } catch (NumberFormatException ex) {
-            solutionsArea.setText("Invalid input. Please enter valid numbers in all fields.");
+        }
+
+        @Override
+        protected void process(List<String> chunks) {
+            for (String message : chunks) {
+                broadcast(message);
+            }
+        }
+
+        @Override
+        protected void done() {
+            try {
+                if (!isCancelled()) {
+                    currentSolutions = get();
+                    if (modeCombo.getSelectedItem().equals("Specific Values")) {
+                        for (int i = 0; i < valueFields.length; i++) {
+                            foundValueTextAreas[i].setText(valueFields[i].getText().trim());
+                        }
+                        broadcast("Found " + currentSolutions.getNumSolutions() + " solutions!\nToggle 'Show Solutions' to display them.");
+                    } else {
+                        double[] foundValues = currentSolutions.getEvaluatedExpressionList().get(0).getValues();
+                        for (int i = 0; i < foundValues.length; i++) {
+                            foundValueTextAreas[i].setText(String.valueOf(foundValues[i]));
+                        }
+                        broadcast("Found values displayed above.\nToggle 'Show Solutions' to display the solutions.");
+                    }
+                } else {
+                    broadcast("Solution search cancelled.");
+                }
+            } catch (Exception e) {
+                broadcast("Error finding solutions: " + e.getMessage());
+                if (modeCombo.getSelectedItem().equals("Find Values")) {
+                    broadcast("Please enter valid numbers for the goal, and the values.");
+                } else {
+                    broadcast("Please enter valid numbers for the goal, value range, and solution range.");
+                }
+            } finally {
+                findButton.setText(modeCombo.getSelectedItem().equals("Find Values") ? "Find Values" : "Find Solutions");
+            }
         }
     }
     
-    private void showSolutions() {
+    private void toggleSolutions() {
         if (currentSolutions == null) {
-            solutionsArea.setText("Please find solutions first!");
+            broadcast("Please find solutions first!");
+            toggleSolutionsButton.setSelected(false);
             return;
         }
         
-        StringBuilder sb = new StringBuilder();
-        sb.append("Found ").append(currentSolutions.getNumSolutions()).append(" solutions:\n\n");
-        
-        for (EvaluatedExpression solution : currentSolutions.getEvaluatedExpressionList()) {
-            sb.append(solution.display()).append(" = ").append(currentSolutions.getGoal()).append("\n");
+        if (toggleSolutionsButton.isSelected()) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Found ").append(currentSolutions.getNumSolutions()).append(" solutions:\n\n");
+            
+            for (EvaluatedExpression solution : currentSolutions.getEvaluatedExpressionList()) {
+                sb.append(solution.display()).append(" = ").append(currentSolutions.getGoal()).append("\n");
+            }
+            
+            solutionTextArea.setText(sb.toString());
+            solutionDisplayPanel.setVisible(true);
+            toggleSolutionsButton.setText("Hide Solutions");
+        } else {
+            solutionDisplayPanel.setVisible(false);
+            toggleSolutionsButton.setText("Show Solutions");
         }
-        
-        solutionsArea.setText(sb.toString());
     }
 
     private void saveSolutions() {
         if (savedSolutionLists.isEmpty()) {
-            solutionsArea.setText("Please find solutions first!");
+            broadcast("Please find solutions first!");
             return;
         }
         broadcast("Saving solutions to file...");
@@ -273,7 +370,7 @@ public class CountingOperationsApplet implements SolverUpdateListener {
 
     private void addToSaved() {
         if (currentSolutions == null) {
-            solutionsArea.setText("Please find solutions first!");
+            broadcast("Please find solutions first!");
             return;
         }
         broadcast("Adding solutions to saved list...");
@@ -289,9 +386,7 @@ public class CountingOperationsApplet implements SolverUpdateListener {
 
     @Override
     public void onSolverUpdate(String update) {
-        javax.swing.SwingUtilities.invokeLater(() -> {
-            debugArea.append("\n" + update);
-        });
+        broadcast(update);
     }
 
     private void broadcast(String message) {
@@ -301,7 +396,9 @@ public class CountingOperationsApplet implements SolverUpdateListener {
     }
     
     public static void main(String[] args) {
-        //TODO: make a way to view saved solutions in applet, and make the gui better.
+        //TODO: make the gui better.
+        //TODO: fix a problem where it finds that there are a valid number of solutions when there are more solutions than the max.
+        // TODO: fix duplicate solutions appearing in the solutions list.
         javax.swing.SwingUtilities.invokeLater(() -> {
             new CountingOperationsApplet();
         });
