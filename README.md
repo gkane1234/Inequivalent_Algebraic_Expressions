@@ -188,7 +188,7 @@ recreate the enumeration that was described in the paper. I experimented
 with trying to predict if a certain set of numbers is likely to have a
 certain solution, however I did not get particularly far with that.
 
-## Acknowledgements
+## Acknowledgments
 
 Other work in the area:
 [The OEIS page that has the values as well as the C code for generating the number of expressions](https://oeis.org/A140606)
