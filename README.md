@@ -193,7 +193,7 @@ certain solution, however I did not get particularly far with that.
 Other work in the area:
 [The OEIS page that has the values as well as the C code for generating the number of expressions](https://oeis.org/A140606)
 
-[A paper that details a working version that enumerates inequivalent expressions, used for a task in NLP](https://arxiv.org/pdf/2210.07017)
+[A paper that details a method of enumerating inequivalent expressions without the need of a filter, used for a task in NLP](https://arxiv.org/pdf/2210.07017)
 
 [A paper that details a counting algorithm for inequivalent expressions over the 4 standard operations with additive inversion](https://arxiv.org/pdf/2405.13928)
 
