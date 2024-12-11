@@ -26,8 +26,8 @@ $$\frac{(2222222-2)(222222-2222)}{22222-222}+22 = 22222222$$
 ## Installation
 
 ### Prerequisites
-- Package Trove
-- Package RocksDB
+- Package Trove for the faster, more ram intensive approach for generation
+- Package RocksDB for the slower but less ram intensive apporach
 
 ### Steps
 1. Clone the repository:
@@ -139,54 +139,31 @@ Using java, it was able to find answers for 6 numbers, however it was unable to 
 
 Already I could find some pretty gnarly looking solutions to some questions, such as using 3,4,7,9,14,16 to make 2027: ((((4/7)+(16*9))*14)+3)=2027. Which was found in approximately 30 seconds including generating the set of inequivalent expressions to solve it. 
 
-At this point I wanted to find answers for 7 values. However Java quickly ran out of space when trying to do this. To reduce the amount of space being used, which was primarily in the Double hash set used to check if values had been seen before, I switched to a Float Hash set, since I did not need the precision of doubles.
-
-I also noticed that java.lang.Double.valueOf() was accounting for almost
-6
-
-The next speed up I could think of was to introduce a hash set that also
-utilizes primitive data types to save on memory used for boxing and
-unboxing the floats.
-
-After using TFloatHashSet, the code cpu usage now looks much better. But
-the much bigger difference is in the memory usage. In the original
-approximately 45
-
-Using the generic hashset. This looks so beautiful! We see all generic
-arrays taking up big space. Of course, my object for expressions seems
-to be a decent burden on ram but not enough to do anything drastic with
-it.
-
-I also looked for other small improvements that I could do. Including
-trying to use a custom hash function, multithreading, rewriting code I
+At this point I wanted to find answers for 7 values. However Java quickly ran out of space when trying to do this. To reduce the amount of space being used, which was primarily in the Double hash set used to check if values had been seen before, I switched to a Float Hash set, since I did not need the precision of doubles. I also noticed that java.lang.Double.valueOf() was accounting for almost
+6% of cpu runtime. I tried to eliminate all boxing and unboxing of double primitives, and found that I was still doing this with the implementation of my apply method for doing operations.  The next speed up I could think of was to use TFloatHashSet, which utilizes primitive data types to save on memory used for boxing and unboxing the floats, and saved a few gb of memory over the Java.Util implementation. I also looked for other small improvements that I could do. Including trying to use a custom hash function, multithreading, rewriting code I
 found on the OEIS website in python and java to directly find the number
 of inequivalent expressions I was expecting to find so I use an array
 instead of using a list and using a custom set size stack.
 
-WIth these improvements, I was able to improve by a further 500
+With these improvements, I was able to improve by a further 500% and it ran similar calculations on 6 numbers in about 6 seconds. 
 
 I then went back to trying to solve for 7 values. By waiting about 30
 minutes, I was able to find that using 10 truncators with 7 values
 missed the expected number of expressions by around 30 (out of 29
 million) which indicates that around 1 in a million times all 10
 truncators falsely believe that a certain unique expression is
-equivalent to ones before, indicating a 10
+equivalent to ones before, indicating a 10% chance for any of them, incorrectly assuming independence and a uniform probability. By increasing the number of truncators to 20 and letting it run for over an hour, it was finally able to find all the expressions and save them to a file. 
 
-This enumeration question of expressions has been solved using a direct
-combinatorial approach https://arxiv.org/abs/2210.07017 in 2021. My
-method likely requires significantly more overhead to hold the large
-hash sets while the set of expressions is being created, but I believe
-my method, especially for 6 numbers and below, is very lightweight once
-it is created.
+After I got it able to load the expressions for 7 variables down to about 20 seconds, I created a compression algorithm to hold the large lists of expressions, this essential saves the data of each expression into a bitmap of a long primitive and then packs them together into an array of longs so that there are not bits unused. Getting this to work took a lot longer than expected, but doing so reduced the size of the saved file for 7 variables from 1.7 gb to 100mb and the read time down from 20 seconds to about 100ms.
 
-I want to look for ways to reduce the amount of memory needed to use the
-7 value solver, right now it takes up about 5 gb of memory and around 5
-minutes to read from a file. I am considering using a different way to
-save the expressions to allow for multithreading in reading and maybe
-using a database to store the solver. I was considering trying to
-recreate the enumeration that was described in the paper. I experimented
-with trying to predict if a certain set of numbers is likely to have a
-certain solution, however I did not get particularly far with that.
+The last optimization was to implement a simple hash set using RocksDB which allows for the hash set to be mostly saved off of RAM so that the generation could be done without using 10+gb of RAM, instead needing significantly less than 1 gb even for generating 7, however taking about 4 times as long due to the speed reduction on lookup.
+
+Current goals:
+
+1. Generating the expressions for 8. Napkin math suggests that using the current method the compressed saved file would take up about 6 gb, however the database hash sets would use around 400 gb during the generation process and the actual calculation would take no less than 300 hours
+2. Implementing the enumeration approach. There is a paper that details generating this list of inequivalent expressions directly using a combinatorial approach. This seems like a nicer way to approach the problem, however I have been unable to figure out how to do this works.
+3. Continue improving the UI. Right now it looks very barebones however it still does what it needs to.
+
 
 ## Acknowledgments
 
